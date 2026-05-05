@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>夏日回音 — 角色创建</title>
+<style>
+/* ============================================
+   夏日回音 · 角色创建向导
+   ============================================ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;background:#1a1a2e;color:#fff;user-select:none}
+
+/* --- 容器 --- */
+.page{position:fixed;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1}
+.page.active{display:flex}
+.page.hidden{display:none}
+
+/* ============================================
+   标题画面
+   ============================================ */
+#title-screen{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)}
+.title-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 20% 50%,rgba(100,100,255,0.15) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(255,150,200,0.1) 0%,transparent 50%),radial-gradient(ellipse at 50% 80%,rgba(200,180,255,0.08) 0%,transparent 50%);animation:bgPulse 8s ease-in-out infinite alternate}
+@keyframes bgPulse{0%{opacity:.8;transform:scale(1)}100%{opacity:1;transform:scale(1.05)}}
+.title-content{position:relative;z-index:2;text-align:center;animation:fadeInUp 1.5s ease-out}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+.title-sub{font-size:14px;letter-spacing:6px;color:rgba(200,190,255,.7);margin-bottom:20px;font-weight:300}
+.title-main{font-size:64px;font-weight:700;letter-spacing:18px;background:linear-gradient(135deg,#e8d5ff,#8ec5fc,#e0c3fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:15px}
+.title-desc{font-size:14px;color:rgba(255,255,255,.5);letter-spacing:3px;margin-bottom:50px;line-height:1.8}
+
+/* ============================================
+   进度条
+   ============================================ */
+.progress-bar{position:fixed;top:0;left:0;width:100%;height:3px;z-index:100;background:rgba(255,255,255,.05)}
+.progress-fill{height:100%;background:linear-gradient(90deg,#e8d5ff,#8ec5fc);transition:width .6s ease;width:0%}
+.progress-step{position:fixed;top:16px;right:20px;z-index:100;font-size:12px;color:rgba(255,255,255,.3);letter-spacing:2px}
+
+/* ============================================
+   创建步骤通用
+   ============================================ */
+.step{position:fixed;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
+.step.active{display:flex}
+.step-inner{max-width:680px;width:100%;animation:fadeInUp .6s ease-out}
+
+.step-number{font-size:12px;letter-spacing:4px;color:rgba(200,180,255,.4);margin-bottom:8px}
+.step-title{font-size:28px;font-weight:600;letter-spacing:4px;margin-bottom:8px}
+.step-subtitle{font-size:14px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-bottom:36px;line-height:1.6}
+
+/* --- 选项卡片网格 --- */
+.card-grid{display:grid;gap:12px;max-width:600px;margin:0 auto}
+.card-grid.col-2{grid-template-columns:1fr 1fr}
+.card-grid.col-3{grid-template-columns:1fr 1fr 1fr}
+.card-grid.col-1{grid-template-columns:1fr}
+.card-grid.col-mixed{grid-template-columns:1fr 1fr 1fr 1fr}
+
+.option-card{position:relative;padding:20px 18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;cursor:pointer;transition:all .3s;text-align:left}
+.option-card:hover{background:rgba(255,255,255,.08);border-color:rgba(200,180,255,.3);transform:translateY(-2px)}
+.option-card.selected{background:rgba(200,180,255,.1);border-color:rgba(200,180,255,.5);box-shadow:0 0 20px rgba(200,180,255,.1)}
+.option-card .emoji{font-size:22px;margin-bottom:6px;display:block}
+.option-card .label{font-size:15px;font-weight:600;letter-spacing:1px;margin-bottom:4px}
+.option-card .desc{font-size:12px;color:rgba(255,255,255,.45);line-height:1.5}
+.option-card .check{position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.15);transition:all .3s;display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent}
+.option-card.selected .check{border-color:rgba(200,180,255,.7);background:rgba(200,180,255,.2);color:#fff}
+
+/* name input variant */
+.name-input-wrap{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.name-preset{padding:12px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;transition:all .3s;font-size:15px;letter-spacing:2px;color:#fff}
+.name-preset:hover,.name-preset.selected{background:rgba(200,180,255,.1);border-color:rgba(200,180,255,.4)}
+.name-custom-wrap{width:100%;margin-top:8px}
+.name-custom-wrap input{width:100%;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:16px;font-family:inherit;letter-spacing:2px;outline:none;transition:border-color .3s}
+.name-custom-wrap input:focus{border-color:rgba(200,180,255,.4)}
+.name-custom-wrap input::placeholder{color:rgba(255,255,255,.2);letter-spacing:1px}
+
+/* --- 多选提示 --- */
+.multi-hint{font-size:12px;color:rgba(200,180,255,.4);margin-bottom:14px;letter-spacing:1px}
+
+/* --- 导航按钮 --- */
+.nav-wrap{display:flex;justify-content:space-between;margin-top:32px;gap:12px}
+.btn{min-width:100px;padding:12px 28px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#fff;font-size:14px;font-family:inherit;letter-spacing:3px;cursor:pointer;transition:all .3s}
+.btn:hover{background:rgba(255,255,255,.1);border-color:rgba(200,180,255,.4)}
+.btn-primary{background:rgba(200,180,255,.15);border-color:rgba(200,180,255,.3)}
+.btn-primary:hover{background:rgba(200,180,255,.25);border-color:rgba(200,180,255,.5)}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+.btn-back{background:transparent;border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
+
+/* ============================================
+   角色卡（最终）
+   ============================================ */
+#final-screen{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)}
+.char-card-wrap{max-width:520px;width:100%;animation:fadeInUp .8s ease-out;text-align:center}
+.char-card{border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:40px 32px;background:rgba(255,255,255,.03);backdrop-filter:blur(10px);margin-bottom:24px}
+.char-card .avatar{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:32px;border:2px solid rgba(200,180,255,.3)}
+.char-card .cname{font-size:26px;font-weight:600;letter-spacing:4px;margin-bottom:4px}
+.char-card .cname-sub{font-size:13px;color:rgba(255,255,255,.3);letter-spacing:2px;margin-bottom:20px}
+
+.char-row{display:flex;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.char-row:last-child{border:none}
+.char-row .key{width:72px;font-size:12px;color:rgba(255,255,255,.3);letter-spacing:2px;flex-shrink:0;padding-top:2px}
+.char-row .val{font-size:14px;color:rgba(255,255,255,.7);line-height:1.6;letter-spacing:.5px}
+
+.start-prompt{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px 20px;font-size:12px;color:rgba(255,255,255,.4);text-align:left;line-height:1.8;word-break:break-all;margin-bottom:20px;font-family:inherit;max-height:120px;overflow-y:auto;cursor:pointer}
+.start-prompt:hover{background:rgba(255,255,255,.06)}
+
+/* --- 模板选择卡片（横排） --- */
+.template-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;max-width:600px;margin:0 auto}
+.tpl-card{padding:20px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;cursor:pointer;transition:all .3s;text-align:center}
+.tpl-card:hover{background:rgba(255,255,255,.08);border-color:rgba(200,180,255,.3);transform:translateY(-2px)}
+.tpl-card.selected{background:rgba(200,180,255,.1);border-color:rgba(200,180,255,.5)}
+.tpl-card .tpl-icon{font-size:32px;margin-bottom:8px}
+.tpl-card .tpl-name{font-size:15px;font-weight:600;letter-spacing:2px;margin-bottom:4px}
+.tpl-card .tpl-desc{font-size:11px;color:rgba(255,255,255,.4);line-height:1.5}
+.tpl-card .tpl-tag{display:inline-block;margin-top:8px;padding:2px 10px;border-radius:10px;font-size:10px;letter-spacing:1px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.3)}
+
+/* ============================================
+   响应式
+   ============================================ */
+@media(max-width:768px){
+  .title-main{font-size:40px;letter-spacing:10px}
+  .step-title{font-size:22px}
+  .card-grid.col-2,.card-grid.col-3,.card-grid.col-mixed{grid-template-columns:1fr 1fr}
+  .template-wrap{grid-template-columns:1fr 1fr}
+  .btn{padding:12px 20px;font-size:13px}
+}
+@media(max-width:480px){
+  .title-main{font-size:30px;letter-spacing:6px}
+  .card-grid.col-2,.card-grid.col-3,.card-grid.col-mixed{grid-template-columns:1fr}
+  .template-wrap{grid-template-columns:1fr}
+  .char-card{padding:28px 20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ========= 标题画面 ========= -->
+<div id="title-screen" class="page active">
+  <div class="title-bg"></div>
+  <div class="title-content">
+    <div class="title-sub">—— AI Galgame ——</div>
+    <div class="title-main">选 择 剧 本</div>
+    <div class="title-desc">先选择一个你想体验的故事，然后创造属于你自己的主角</div>
+
+    <div class="template-wrap" style="margin-bottom:32px;max-width:640px">
+      <div class="tpl-card" onclick="selectTemplateOnTitle(this,'campus')">
+        <div class="tpl-icon">🏫</div>
+        <div class="tpl-name">校园青春</div>
+        <div class="tpl-desc">夏日的回音<br>治愈 · 青春 · 纯爱</div>
+        <div class="tpl-tag">约25决策点 · 7位角色</div>
+      </div>
+      <div class="tpl-card" onclick="selectTemplateOnTitle(this,'cafe')">
+        <div class="tpl-icon">☕</div>
+        <div class="tpl-name">都市文艺</div>
+        <div class="tpl-desc">深夜咖啡店<br>温馨 · 文艺 · 微悬疑</div>
+        <div class="tpl-tag">约25决策点 · 3位角色</div>
+      </div>
+      <div class="tpl-card" onclick="selectTemplateOnTitle(this,'changan')">
+        <div class="tpl-icon">🏮</div>
+        <div class="tpl-name">古风奇幻</div>
+        <div class="tpl-desc">月下长安<br>古风 · 权谋 · 玄幻</div>
+        <div class="tpl-tag">约25决策点 · 3位角色</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="startBtn" onclick="startCreation()" style="width:240px;padding:16px 0;font-size:16px;letter-spacing:8px" disabled>开 始</button>
+  </div>
+</div>
+
+<!-- ========= 进度条 ========= -->
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<div class="progress-step" id="progressStep">1 / 9</div>
+
+<!-- ========= Step 1：API 配置 ========= -->
+<div class="step" id="step-1">
+  <div class="step-inner">
+    <div class="step-number">STEP 01 / 09</div>
+    <div class="step-title">配置 AI 引擎</div>
+    <div class="step-subtitle">选择你要使用的 AI 模型来驱动这个故事</div>
+
+    <!-- 预设模型 -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;letter-spacing:2px;color:rgba(200,180,255,.4);margin-bottom:10px">选择模型</div>
+      <div class="card-grid col-mixed" style="max-width:520px">
+        <div class="option-card" onclick="selectModel(this,'deepseek')" data-val="deepseek">
+          <span class="check">✓</span>
+          <div class="label" style="font-size:14px">DeepSeek</div>
+          <div class="desc">deepseek-chat</div>
+        </div>
+        <div class="option-card" onclick="selectModel(this,'gpt4o')" data-val="gpt4o">
+          <span class="check">✓</span>
+          <div class="label" style="font-size:14px">GPT-4o</div>
+          <div class="desc">gpt-4o / gpt-4o-mini</div>
+        </div>
+        <div class="option-card" onclick="selectModel(this,'claude')" data-val="claude">
+          <span class="check">✓</span>
+          <div class="label" style="font-size:14px">Claude</div>
+          <div class="desc">claude-sonnet-4</div>
+        </div>
+        <div class="option-card" onclick="selectModel(this,'custom')" data-val="custom">
+          <span class="check">✓</span>
+          <div class="label" style="font-size:14px">自定义</div>
+          <div class="desc">手动输入</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Key -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;letter-spacing:2px;color:rgba(200,180,255,.4);margin-bottom:6px">API Key</div>
+      <input type="password" id="apiKey" placeholder="sk-..." maxlength="200"
+        style="width:100%;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .3s"
+        oninput="onApiChange()">
+    </div>
+
+    <!-- Base URL -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;letter-spacing:2px;color:rgba(200,180,255,.4);margin-bottom:6px">Base URL</div>
+      <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1" maxlength="200"
+        style="width:100%;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .3s"
+        oninput="onApiChange()">
+    </div>
+
+    <!-- Model name (for custom) -->
+    <div style="margin-bottom:14px" id="customModelWrap" class="hidden">
+      <div style="font-size:12px;letter-spacing:2px;color:rgba(200,180,255,.4);margin-bottom:6px">模型名称</div>
+      <input type="text" id="customModel" placeholder="如: gpt-4o-mini, deepseek-chat, claude-sonnet-4-20250514" maxlength="100"
+        style="width:100%;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .3s"
+        oninput="onApiChange()">
+    </div>
+
+    <div class="nav-wrap" style="margin-top:20px">
+      <div></div>
+      <button class="btn btn-primary" id="step1-next" disabled onclick="goStep(2)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 2：名字 ========= -->
+<div class="step" id="step-2">
+  <div class="step-inner" style="max-width:520px">
+    <div class="step-number">STEP 02 / 09</div>
+    <div class="step-title">你的名字</div>
+    <div class="step-subtitle">在这段故事里，你叫什么？</div>
+
+    <div class="name-input-wrap">
+      <div class="name-preset" onclick="selectName(this,'陈远')">陈远</div>
+      <div class="name-preset" onclick="selectName(this,'林默')">林默</div>
+      <div class="name-preset" onclick="selectName(this,'苏晨')">苏晨</div>
+      <div class="name-preset" onclick="selectName(this,'顾言')">顾言</div>
+    </div>
+    <div class="name-custom-wrap">
+      <input type="text" id="customName" placeholder="或者输入你自己的名字…" maxlength="10"
+        oninput="onCustomName()">
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(1)">← 上一步</button>
+      <button class="btn btn-primary" id="step2-next" disabled onclick="goStep(3)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 3：性格 ========= -->
+<div class="step" id="step-3">
+  <div class="step-inner">
+    <div class="step-number">STEP 03 / 09</div>
+    <div class="step-title">你的性格底色</div>
+    <div class="step-subtitle">下面哪种描述最接近你？</div>
+
+    <div class="card-grid col-2" style="max-width:520px">
+      <div class="option-card" onclick="selectCard(this,'silent')" data-val="silent">
+        <span class="check">✓</span>
+        <span class="emoji">🧊</span>
+        <div class="label">沉默寡言</div>
+        <div class="desc">话不多，心里什么都清楚。观察力强，偶尔语出惊人。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'cheerful')" data-val="cheerful">
+        <span class="check">✓</span>
+        <span class="emoji">☀️</span>
+        <div class="label">活泼开朗</div>
+        <div class="desc">自来熟，气氛担当。朋友很多，但真心的没几个。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'gentle')" data-val="gentle">
+        <span class="check">✓</span>
+        <span class="emoji">🌙</span>
+        <div class="label">温柔体贴</div>
+        <div class="desc">善解人意，先照顾别人感受。偶尔被人说太好欺负。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'tsundere')" data-val="tsundere">
+        <span class="check">✓</span>
+        <span class="emoji">🔥</span>
+        <div class="label">傲娇毒舌</div>
+        <div class="desc">嘴上不饶人，会在看不到的地方偷偷关心你。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'rational')" data-val="rational">
+        <span class="check">✓</span>
+        <span class="emoji">📐</span>
+        <div class="label">冷静理性</div>
+        <div class="desc">情绪往后放，逻辑放前面。不是冷血，只是习惯了先分析再感受。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'naive')" data-val="naive">
+        <span class="check">✓</span>
+        <span class="emoji">🌱</span>
+        <div class="label">天然率真</div>
+        <div class="desc">想到什么说什么，从不拐弯抹角。偶尔说错话，但没人真的生你的气。</div>
+      </div>
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(2)">← 上一步</button>
+      <button class="btn btn-primary" id="step3-next" disabled onclick="goStep(4)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 4：特质 ========= -->
+<div class="step" id="step-4">
+  <div class="step-inner">
+    <div class="step-number">STEP 04 / 09</div>
+    <div class="step-title">你的特长</div>
+    <div class="step-subtitle">选两样你最擅长的（多选，最多2项）</div>
+    <div class="multi-hint" id="trait-hint">已选 0 / 2</div>
+
+    <div class="card-grid col-3" style="max-width:520px">
+      <div class="option-card" onclick="toggleCard(this,'sports')" data-val="sports">
+        <span class="check">✓</span>
+        <span class="emoji">🏃</span>
+        <div class="label">运动</div>
+        <div class="desc">田径场上有你的名字</div>
+      </div>
+      <div class="option-card" onclick="toggleCard(this,'reading')" data-val="reading">
+        <span class="check">✓</span>
+        <span class="emoji">📖</span>
+        <div class="label">读书</div>
+        <div class="desc">图书馆的常客</div>
+      </div>
+      <div class="option-card" onclick="toggleCard(this,'art')" data-val="art">
+        <span class="check">✓</span>
+        <span class="emoji">🎨</span>
+        <div class="label">绘画</div>
+        <div class="desc">速写本不离身</div>
+      </div>
+      <div class="option-card" onclick="toggleCard(this,'music')" data-val="music">
+        <span class="check">✓</span>
+        <span class="emoji">🎵</span>
+        <div class="label">音乐</div>
+        <div class="desc">会一门乐器</div>
+      </div>
+      <div class="option-card" onclick="toggleCard(this,'cooking')" data-val="cooking">
+        <span class="check">✓</span>
+        <span class="emoji">🍳</span>
+        <div class="label">烹饪</div>
+        <div class="desc">厨艺意外地好</div>
+      </div>
+      <div class="option-card" onclick="toggleCard(this,'photo')" data-val="photo">
+        <span class="check">✓</span>
+        <span class="emoji">📷</span>
+        <div class="label">摄影</div>
+        <div class="desc">透过镜头看世界</div>
+      </div>
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(3)">← 上一步</button>
+      <button class="btn btn-primary" id="step4-next" disabled onclick="goStep(5)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 5：社交面具 ========= -->
+<div class="step" id="step-5">
+  <div class="step-inner">
+    <div class="step-number">STEP 05 / 09</div>
+    <div class="step-title">在别人眼中，你是什么样的人？</div>
+    <div class="step-subtitle">这不一定是你真实的样子——但大多数人第一眼会这样看你。</div>
+
+    <div class="card-grid col-2" style="max-width:520px">
+      <div class="option-card" onclick="selectCard(this,'direct')" data-val="direct">
+        <span class="check">✓</span>
+        <span class="emoji">🎯</span>
+        <div class="label">直爽派</div>
+        <div class="desc">想什么说什么，从不藏着掖着。大家都觉得你很好相处——但有时候话说太快，事后会后悔。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'listener')" data-val="listener">
+        <span class="check">✓</span>
+        <span class="emoji">👂</span>
+        <div class="label">倾听者</div>
+        <div class="desc">你话不多，但和你说话很舒服。朋友们喜欢找你倾诉——你记得他们说的每一件事。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'humor')" data-val="humor">
+        <span class="check">✓</span>
+        <span class="emoji">😄</span>
+        <div class="label">气氛制造者</div>
+        <div class="desc">你是那个总能把人逗笑的人。有你在就不会冷场——但笑完之后，很少有人问你开不开心。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'loner')" data-val="loner">
+        <span class="check">✓</span>
+        <span class="emoji">🌄</span>
+        <div class="label">独行侠</div>
+        <div class="desc">你习惯一个人待着。不是不合群，只是觉得应付人际关系太累了——但你并不讨厌别人靠近你。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'mediator')" data-val="mediator">
+        <span class="check">✓</span>
+        <span class="emoji">🤝</span>
+        <div class="label">调和者</div>
+        <div class="desc">你总是那个在大家争执时站出来打圆场的人——有时候委屈自己，但看到大家和好你就觉得值了。</div>
+      </div>
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(4)">← 上一步</button>
+      <button class="btn btn-primary" id="step5-next" disabled onclick="goStep(6)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 6：内心暗角 ========= -->
+<div class="step" id="step-6">
+  <div class="step-inner">
+    <div class="step-number">STEP 06 / 09</div>
+    <div class="step-title">你不想被别人看到的一面</div>
+    <div class="step-subtitle">每个人都有不想被发现的角落。你的那个角落，是什么样的？</div>
+
+    <div class="card-grid col-1" style="max-width:520px">
+      <div class="option-card" onclick="selectCard(this,'overthink')" data-val="overthink">
+        <span class="check">✓</span>
+        <div class="label">过度思虑</div>
+        <div class="desc">你想得太多。一件小事能在脑子里翻来覆去——「如果当时那样说就好了」「他是不是讨厌我？」</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'peopleplease')" data-val="peopleplease">
+        <span class="check">✓</span>
+        <div class="label">讨好型人格</div>
+        <div class="desc">你很难拒绝别人。答应了之后又后悔，但下次还是说不出那个「不」字。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'stubborn')" data-val="stubborn">
+        <span class="check">✓</span>
+        <div class="label">固执己见</div>
+        <div class="desc">你认定的事，九头牛都拉不回来。你知道这是缺点，但你就是不想改——或者说，不甘心改。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'avoidant')" data-val="avoidant">
+        <span class="check">✓</span>
+        <div class="label">回避冲突</div>
+        <div class="desc">你宁可自己难受，也不想和人起争执。有些话到嘴边了，又咽回去——「算了，不说了。」</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'selfdoubt')" data-val="selfdoubt">
+        <span class="check">✓</span>
+        <div class="label">自我怀疑</div>
+        <div class="desc">你总觉得自己做得不够好。别人的一句夸奖你会反复琢磨——「他是真心的吗？还是只是客气？」</div>
+      </div>
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(5)">← 上一步</button>
+      <button class="btn btn-primary" id="step6-next" disabled onclick="goStep(7)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 5：回到母校的原因 ========= -->
+<div class="step" id="step-7">
+  <div class="step-inner">
+    <div class="step-number">STEP 07 / 09</div>
+    <div class="step-title">你为什么回到这里？</div>
+    <div class="step-subtitle">毕业后的暑假，你回到即将拆迁的母校。为什么？</div>
+
+    <div class="card-grid col-1" style="max-width:520px">
+      <div class="option-card" onclick="selectCard(this,'nostalgia')" data-val="nostalgia">
+        <span class="check">✓</span>
+        <div class="label">想最后看一眼这间教室</div>
+        <div class="desc">三年的回忆都在这里了，想好好告个别。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'random')" data-val="random">
+        <span class="check">✓</span>
+        <div class="label">听说学校要拆了，顺路来看看</div>
+        <div class="desc">其实绕了很远的路。但你不打算承认。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'expect')" data-val="expect">
+        <span class="check">✓</span>
+        <div class="label">也许……能遇到什么人</div>
+        <div class="desc">你有一个自己都不太愿意承认的期待。</div>
+      </div>
+      <div class="option-card" onclick="selectCard(this,'vague')" data-val="vague">
+        <span class="check">✓</span>
+        <div class="label">说不清楚，就是想回来</div>
+        <div class="desc">心里有个声音让你来的。你没多想，就来了。</div>
+      </div>
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(6)">← 上一步</button>
+      <button class="btn btn-primary" id="step7-next" disabled onclick="goStep(8)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 8：模板选择 ========= -->
+<div class="step" id="step-8">
+  <div class="step-inner">
+    <div class="step-number">STEP 08 / 09</div>
+    <div class="step-title">选择你的故事</div>
+    <div class="step-subtitle">你想进入哪个世界？</div>
+
+    <div class="template-wrap">
+      <div class="tpl-card" onclick="selectTemplate(this,'campus')">
+        <div class="tpl-icon">🏫</div>
+        <div class="tpl-name">校园青春</div>
+        <div class="tpl-desc">夏日的回音<br>治愈 · 青春 · 纯爱</div>
+        <div class="tpl-tag">约25个决策点 · 7位角色</div>
+      </div>
+      <div class="tpl-card" onclick="selectTemplate(this,'cafe')">
+        <div class="tpl-icon">☕</div>
+        <div class="tpl-name">都市文艺</div>
+        <div class="tpl-desc">深夜咖啡店<br>温馨 · 文艺 · 微悬疑</div>
+        <div class="tpl-tag">约30个决策点 · 6位角色</div>
+      </div>
+      <div class="tpl-card" onclick="selectTemplate(this,'changan')">
+        <div class="tpl-icon">🏮</div>
+        <div class="tpl-name">古风奇幻</div>
+        <div class="tpl-desc">月下长安<br>古风 · 权谋 · 玄幻</div>
+        <div class="tpl-tag">约35个决策点 · 6位角色</div>
+      </div>
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(7)">← 上一步</button>
+      <button class="btn btn-primary" id="step8-next" disabled onclick="goStep(9)">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= Step 9：记忆空间 ========= -->
+<div class="step" id="step-9">
+  <div class="step-inner">
+    <div class="step-number">STEP 09 / 09</div>
+    <div class="step-title">命名你的记忆空间</div>
+    <div class="step-subtitle">你的故事需要一个名字来存放。这是你专属的回忆存档。</div>
+
+    <div class="name-input-wrap" style="margin-bottom:20px">
+      <div class="name-preset" onclick="selectSlot(this,'初次夏日')">初次夏日</div>
+      <div class="name-preset" onclick="selectSlot(this,'第二次')">第二次</div>
+      <div class="name-preset" onclick="selectSlot(this,'三周目')">三周目</div>
+      <div class="name-preset" onclick="selectSlot(this,'真结局')">真结局</div>
+    </div>
+    <div class="name-custom-wrap">
+      <input type="text" id="customSlot" placeholder="或者自定义存档名…" maxlength="20"
+        oninput="onCustomSlot()">
+    </div>
+    <div style="margin-top:16px;padding:12px 16px;background:rgba(255,255,255,.03);border-radius:8px;font-size:12px;color:rgba(200,180,255,.4);line-height:1.6">
+      💾 每次新游戏都会创建独立的记忆空间。<br>
+      已有的存档不会丢失，可以随时切换。
+    </div>
+
+    <div class="nav-wrap">
+      <button class="btn btn-back" onclick="goStep(8)">← 上一步</button>
+      <button class="btn btn-primary" id="step9-next" disabled onclick="goStep('final')">下一步 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= 角色卡 / 开始 ========= -->
+<div id="final-screen" class="page">
+  <div class="char-card-wrap">
+    <div class="step-number">完成</div>
+    <div class="step-title" style="margin-bottom:24px">你的角色卡</div>
+
+    <div class="char-card" id="charCard">
+      <div class="avatar" id="charAvatar">🧊</div>
+      <div class="cname" id="charName">陈远</div>
+      <div class="cname-sub">「……没事。」</div>
+
+      <div class="char-row"><span class="key">性格</span><span class="val" id="charPersonality">沉默寡言</span></div>
+      <div class="char-row"><span class="key">面具</span><span class="val" id="charSocial" style="color:rgba(200,220,255,.7)">—</span></div>
+      <div class="char-row"><span class="key">弱点</span><span class="val" id="charFlaw" style="color:rgba(255,200,200,.6)">—</span></div>
+      <div class="char-row"><span class="key">特质</span><span class="val" id="charTraits">运动 · 摄影</span></div>
+      <div class="char-row"><span class="key">动机</span><span class="val" id="charMotive">也许……能遇到什么人</span></div>
+      <div class="char-row"><span class="key">模板</span><span class="val" id="charTemplate">校园青春 · 夏日的回音</span></div>
+      <div class="char-row"><span class="key">记忆</span><span class="val" id="charSlot" style="color:rgba(200,180,255,.6)">初次夏日</span></div>
+    </div>
+
+    <div class="start-prompt" id="startPrompt" onclick="copyPrompt()">
+      点击复制初始化指令…
+    </div>
+
+    <button class="btn btn-primary" onclick="copyPrompt()" style="width:100%;padding:14px 0;font-size:15px;letter-spacing:6px">
+      📋 复制指令，开始游戏
+    </button>
+    <button class="btn" onclick="goStep(2)" style="margin-top:10px;width:100%;padding:10px 0;font-size:12px;letter-spacing:2px">
+      重新创建
+    </button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// 状态
+// =============================================
+const state = {
+  name: '',
+  personality: '',
+  traits: [],
+  motive: '',
+  template: 'campus',
+  apiKey: '',
+  baseUrl: 'https://api.deepseek.com/v1',
+  model: 'deepseek',
+  modelName: 'deepseek-v4-flash',
+  social: '',
+  flaw: '',
+  slot: '',
+  step: 1,
+};
+
+const MODEL_PRESETS = {
+  deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-v4-flash' },
+  gpt4o: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o' },
+  claude: { baseUrl: 'https://api.anthropic.com', model: 'claude-sonnet-4-20250514' },
+  custom: { baseUrl: '', model: '' },
+};
+
+const PERSONALITY_MAP = {
+  silent: '沉默寡言',
+  cheerful: '活泼开朗',
+  gentle: '温柔体贴',
+  tsundere: '傲娇毒舌',
+};
+
+const SOCIAL_MAP = {
+  direct: '直爽派', listener: '倾听者', humor: '气氛制造者',
+  loner: '独行侠', mediator: '调和者',
+};
+const SOCIAL_EMOJI = {
+  direct: '🎯', listener: '👂', humor: '😄',
+  loner: '🌄', mediator: '🤝',
+};
+const FLAW_MAP = {
+  overthink: '过度思虑', peopleplease: '讨好型人格',
+  stubborn: '固执己见', avoidant: '回避冲突',
+  selfdoubt: '自我怀疑',
+};
+const FLAW_EMOJI = {
+  overthink: '💭', peopleplease: '😰',
+  stubborn: '🪨', avoidant: '🙊',
+  selfdoubt: '❓',
+};
+
+const PERSONALITY_EMOJI = {
+  silent: '🧊',
+  cheerful: '☀️',
+  gentle: '🌙',
+  tsundere: '🔥',
+};
+const TRAIT_NAMES = {
+  sports: '运动', reading: '读书', art: '绘画',
+  music: '音乐', cooking: '烹饪', photo: '摄影',
+};
+const TRAIT_EMOJI = {
+  sports: '🏃', reading: '📖', art: '🎨',
+  music: '🎵', cooking: '🍳', photo: '📷',
+};
+const MOTIVE_MAP = {
+  nostalgia: '想最后看一眼这间教室',
+  random: '听说学校要拆了，顺路来看看',
+  expect: '也许……能遇到什么人',
+  vague: '说不清楚，就是想回来',
+};
+const TEMPLATE_MAP = {
+  campus: { name: '校园青春 · 夏日的回音', icon: '🏫' },
+  cafe: { name: '都市物语 · 深夜咖啡店', icon: '☕' },
+  changan: { name: '古风奇幻 · 月下长安', icon: '🏮' },
+};
+const TOTAL_STEPS = 9;
+
+// =============================================
+// 页面导航
+// =============================================
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showStep(n){
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(`step-${n}`);
+  if(el) el.classList.add('active');
+}
+
+function goStep(n){
+  state.step = n;
+  if(n === 'final'){
+    showPage('final-screen');
+    updateCharCard();
+    generatePrompt();
+  } else {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    showStep(n);
+  }
+  updateProgress(n);
+}
+
+function updateProgress(n){
+  const total = n === 'final' ? TOTAL_STEPS : TOTAL_STEPS;
+  const displayN = n === 'final' ? TOTAL_STEPS : n;
+  document.getElementById('progressFill').style.width = `${(displayN/total)*100}%`;
+  document.getElementById('progressStep').textContent = `${displayN} / ${total}`;
+}
+
+// =============================================
+// Step 1: 名字
+// =============================================
+let nameSelected = false;
+function selectName(el, name){
+  document.querySelectorAll('.name-preset').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  state.name = name;
+  document.getElementById('customName').value = '';
+  nameSelected = true;
+  document.getElementById('step2-next').disabled = false;
+}
+function onCustomName(){
+  const v = document.getElementById('customName').value.trim();
+  document.querySelectorAll('.name-preset').forEach(e=>e.classList.remove('selected'));
+  if(v){
+    state.name = v;
+    nameSelected = true;
+  } else {
+    state.name = '';
+    nameSelected = false;
+  }
+  document.getElementById('step2-next').disabled = !v;
+}
+
+// =============================================
+// Step 1: API 配置
+// =============================================
+function selectModel(el, val){
+  document.querySelectorAll('#step-1 .option-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.model = val;
+
+  const preset = MODEL_PRESETS[val];
+  if(preset){
+    document.getElementById('baseUrl').value = preset.baseUrl;
+    state.baseUrl = preset.baseUrl;
+    if(val === 'custom'){
+      document.getElementById('customModelWrap').classList.remove('hidden');
+      document.getElementById('customModel').value = '';
+      state.modelName = '';
+    } else {
+      document.getElementById('customModelWrap').classList.add('hidden');
+      state.modelName = preset.model;
+    }
+  }
+  onApiChange();
+}
+function onApiChange(){
+  const key = document.getElementById('apiKey').value.trim();
+  const url = document.getElementById('baseUrl').value.trim();
+  state.apiKey = key;
+  state.baseUrl = url;
+  if(state.model === 'custom'){
+    state.modelName = document.getElementById('customModel').value.trim();
+  }
+  const ok = key && url && state.modelName;
+  document.getElementById('step1-next').disabled = !ok;
+}
+
+function selectTemplateOnTitle(el, val){
+  document.querySelectorAll('#title-screen .tpl-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.template = val;
+  document.getElementById('startBtn').disabled = false;
+}
+
+function startCreation(){
+  if(!state.template){
+    alert('请先选择一个剧本');
+    return;
+  }
+  document.getElementById('title-screen').classList.remove('active');
+  goStep(1);
+}
+
+// =============================================
+// Step 6: 记忆空间
+// =============================================
+let slotSelected = false;
+function selectSlot(el, name){
+  document.querySelectorAll('.name-preset').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  state.slot = name;
+  document.getElementById('customSlot').value = '';
+  slotSelected = true;
+  document.getElementById('step7-next').disabled = false;
+}
+function onCustomSlot(){
+  const v = document.getElementById('customSlot').value.trim();
+  document.querySelectorAll('.name-preset').forEach(e=>e.classList.remove('selected'));
+  if(v){
+    state.slot = v;
+    slotSelected = true;
+  } else {
+    state.slot = '';
+    slotSelected = false;
+  }
+  document.getElementById('step7-next').disabled = !v;
+}
+
+// =============================================
+// Steps 2,4: 单选
+// =============================================
+function selectCard(el, val){
+  const parent = el.parentElement;
+  parent.querySelectorAll('.option-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  const stepEl = el.closest('.step');
+  const id = stepEl ? stepEl.id : '';
+  if(id === 'step-3'){
+    state.personality = val;
+    document.getElementById('step3-next').disabled = false;
+  } else if(id === 'step-5'){
+    state.social = val;
+    document.getElementById('step5-next').disabled = false;
+  } else if(id === 'step-6'){
+    state.flaw = val;
+    document.getElementById('step6-next').disabled = false;
+  } else if(id === 'step-7'){
+    state.motive = val;
+    document.getElementById('step7-next').disabled = false;
+  }
+}
+
+// =============================================
+// Step 3: 多选
+// =============================================
+function toggleCard(el, val){
+  const parent = el.parentElement;
+  const all = parent.querySelectorAll('.option-card');
+  const selected = parent.querySelectorAll('.option-card.selected');
+  
+  if(el.classList.contains('selected')){
+    el.classList.remove('selected');
+  } else {
+    if(selected.length >= 2) return;
+    el.classList.add('selected');
+  }
+  
+  const traits = [];
+  parent.querySelectorAll('.option-card.selected').forEach(c=>{
+    traits.push(c.dataset.val);
+  });
+  state.traits = traits;
+  document.getElementById('trait-hint').textContent = `已选 ${traits.length} / 2`;
+  document.getElementById('step4-next').disabled = traits.length === 0;
+}
+
+// =============================================
+// Step 5: 模板选择
+// =============================================
+function selectTemplate(el, val){
+  document.querySelectorAll('.tpl-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.template = val;
+  document.getElementById('step6-next').disabled = false;
+}
+
+// =============================================
+// Step 6: 角色卡 & 指令生成
+// =============================================
+function updateCharCard(){
+  const p = state.personality || 'silent';
+  document.getElementById('charAvatar').textContent = PERSONALITY_EMOJI[p];
+  document.getElementById('charName').textContent = state.name;
+  document.getElementById('charPersonality').textContent = PERSONALITY_MAP[p] || '沉默寡言';
+  document.getElementById('charTraits').textContent = state.traits.map(t=>TRAIT_NAMES[t]).join(' · ');
+  document.getElementById('charSocial').textContent = SOCIAL_MAP[state.social] || '—';
+  document.getElementById('charFlaw').textContent = FLAW_MAP[state.flaw] || '—';
+  document.getElementById('charMotive').textContent = MOTIVE_MAP[state.motive] || '想最后看一眼这间教室';
+  document.getElementById('charTemplate').textContent = TEMPLATE_MAP[state.template]?.name || '校园青春 · 夏日的回音';
+  document.getElementById('charSlot').textContent = state.slot || '默认存档';
+}
+
+function generatePrompt(){
+  const p = state.personality || 'silent';
+  const traits = state.traits.map(t=>TRAIT_NAMES[t]).join('、');
+  const social = SOCIAL_MAP[state.social] || '未设定';
+  const flaw = FLAW_MAP[state.flaw] || '未设定';
+  const motive = MOTIVE_MAP[state.motive] || '想最后看一眼这间教室';
+  const tpl = TEMPLATE_MAP[state.template]?.name || '校园青春 · 夏日的回音';
+  const slot = state.slot || '默认存档';
+  const modelName = state.modelName || 'deepseek-chat';
+  
+  const prompt = `加载 galgame-dev skill，我要开始一局新游戏。
+
+## AI 配置
+- Base URL：${state.baseUrl}
+- 模型：${modelName}
+
+## 主角设定
+- 姓名：${state.name}
+- 性格底色：${PERSONALITY_MAP[p]}
+- 社交面具：${social}
+- 内心暗角：${flaw}
+- 特长：${traits}
+- 回到这里的理由：${motive}
+
+## 模板选择
+${tpl}
+
+## 记忆空间
+- 存档名：${slot}
+
+请根据以上设定开始游戏，创建对应的 .galgame/saves/${slot}/ 目录存放游戏进度。`;
+
+  document.getElementById('startPrompt').textContent = prompt;
+}
+
+function copyPrompt(){
+  const text = document.getElementById('startPrompt').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.querySelector('#final-screen .btn-primary');
+    const orig = btn.textContent;
+    btn.textContent = '✅ 已复制！';
+    setTimeout(()=>btn.textContent = orig, 1500);
+  }).catch(()=>{
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+}
+
+// =============================================
+// 初始化
+// =============================================
+document.addEventListener('DOMContentLoaded', ()=>{
+  // 默认在标题画面
+});
+</script>
+</body>
+</html>
