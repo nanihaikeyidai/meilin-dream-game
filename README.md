@@ -8,7 +8,10 @@
 
 ## 📖 这是什么
 
-AVG-Skill 是一套**纯提示词（prompt）驱动的交互式冒险游戏开发框架**，运行在 [Hermes Agent](https://hermes-agent.nousresearch.com) 之上。AI 自动担任旁白、角色扮演和系统引擎，你只需要通过选择题推进故事。
+AVG-Skill 是一套**纯提示词（prompt）驱动的交互式冒险游戏开发框架**，运行在任意支持skill的agent上，把工程链接丢给agent，让它安装后对话开始游戏就可以，
+支持claudeCode 或其他ide，或者龙虾，hermes  [Hermes Agent](https://hermes-agent.nousresearch.com) 。AI 自动担任旁白、角色扮演和系统引擎，你只需要通过选择题推进故事。
+
+web版本还在开发中，当前需要有通用智能体运行。
 
 ### 核心理念
 
