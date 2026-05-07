@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>创建角色</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page character-page">
+    <div class="page-header">
+      <h1>创建角色</h1>
+      <p class="subtitle" id="templateName">正在加载...</p>
+    </div>
+    <div class="character-card">
+      <div class="form-group">
+        <label for="charName">角色名字</label>
+        <input type="text" id="charName" placeholder="给你的角色起个名字..." maxlength="20">
+      </div>
+      <div class="form-group">
+        <label for="charGender">性别</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="gender" value="女" checked>
+            <span>女</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="gender" value="男">
+            <span>男</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="gender" value="其他">
+            <span>其他</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="charPersonality">性格描述</label>
+        <textarea id="charPersonality" rows="3" placeholder="例如：冷静理智、温柔善良、傲娇毒舌..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="charBackground">背景设定（可选）</label>
+        <textarea id="charBackground" rows="3" placeholder="补充角色的背景故事、特殊能力或隐藏秘密..."></textarea>
+      </div>
+      <div class="form-actions form-actions-center">
+        <button id="backBtn" class="btn-primary btn-secondary">返回</button>
+        <button id="startBtn" class="btn-primary btn-enter">开始游戏</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const templateData = JSON.parse(sessionStorage.getItem('selectedTemplate') || '{}');
+    document.getElementById('templateName').textContent = templateData.title || '未知剧本';
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.electronAPI.navigate.to('templates');
+    });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      const name = document.getElementById('charName').value.trim();
+      const personality = document.getElementById('charPersonality').value.trim();
+      if (!name) {
+        alert('请输入角色名字');
+        return;
+      }
+      const gender = document.querySelector('input[name="gender"]:checked').value;
+      const background = document.getElementById('charBackground').value.trim();
+      const character = { name, gender, personality, background };
+      sessionStorage.setItem('character', JSON.stringify(character));
+      window.electronAPI.navigate.to('game');
+    });
+  </script>
+</body>
+</html>

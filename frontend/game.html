@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>游戏</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="game-layout">
+    <div class="game-narrative">
+      <div class="narrative-header">
+        <span class="chapter-tag">第一章</span>
+        <h2 id="sceneTitle">深夜的访客</h2>
+      </div>
+      <div class="narrative-content" id="narrativeContent">
+        <p>凌晨两点十七分，咖啡店的门铃响了。</p>
+        <p>你抬起头，看见一个浑身湿透的女人站在门口。她的长发滴着水，深灰色的风衣紧贴在身上，像是刚从一场暴雨中走来——可今晚明明是晴天。</p>
+        <p>「还有营业吗？」她的声音很轻，像是从很远的地方传来。</p>
+        <p>你注意到她的右手紧紧攥着一张泛黄的照片，指节发白。照片上是一个男人的侧脸，你隐约觉得有些熟悉。</p>
+        <p>「请进。」你说，「要喝点什么？」</p>
+        <p>她没有回答，只是径直走到角落的位置坐下。昏黄的灯光下，她的轮廓显得模糊而不真实，仿佛随时会融化在夜色里。</p>
+      </div>
+      <div class="narrative-fade"></div>
+    </div>
+
+    <div class="game-choices">
+      <div class="choices-header">
+        <span>你的选择</span>
+      </div>
+      <div class="choices-list" id="choicesList">
+        <button class="choice-btn">
+          <span class="choice-text">给她倒一杯热咖啡，默默观察她</span>
+          <span class="choice-hint">温和 · 观察</span>
+        </button>
+        <button class="choice-btn">
+          <span class="choice-text">直接问她手上的照片是谁</span>
+          <span class="choice-hint">直接 · 好奇</span>
+        </button>
+        <button class="choice-btn">
+          <span class="choice-text">询问她是否需要帮助，比如毛巾或电话</span>
+          <span class="choice-hint">体贴 · 关怀</span>
+        </button>
+        <button class="choice-btn">
+          <span class="choice-text">保持沉默，继续做自己的事</span>
+          <span class="choice-hint">冷淡 · 疏离</span>
+        </button>
+      </div>
+      <div class="choices-custom">
+        <input type="text" id="customInput" class="custom-input" placeholder="或者自己输入对话/行动…" autocomplete="off">
+        <button id="sendBtn" class="btn-primary btn-send">发送</button>
+      </div>
+    </div>
+
+    <div class="game-status">
+      <div class="status-panel">
+        <div class="status-section">
+          <h4>角色</h4>
+          <div class="status-item">
+            <span class="status-label">名字</span>
+            <span class="status-value" id="charName">--</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">性别</span>
+            <span class="status-value" id="charGender">--</span>
+          </div>
+        </div>
+        <div class="status-section">
+          <h4>状态</h4>
+          <div class="status-bar">
+            <span class="status-bar-label">体力</span>
+            <div class="status-bar-track"><div class="status-bar-fill" style="width: 85%"></div></div>
+            <span class="status-bar-value">85</span>
+          </div>
+          <div class="status-bar">
+            <span class="status-bar-label">精神</span>
+            <div class="status-bar-track"><div class="status-bar-fill status-bar-fill-warn" style="width: 60%"></div></div>
+            <span class="status-bar-value">60</span>
+          </div>
+          <div class="status-bar">
+            <span class="status-bar-label">好感</span>
+            <div class="status-bar-track"><div class="status-bar-fill status-bar-fill-love" style="width: 15%"></div></div>
+            <span class="status-bar-value">15</span>
+          </div>
+        </div>
+        <div class="status-section">
+          <h4>剧本</h4>
+          <div class="status-item">
+            <span class="status-label">当前</span>
+            <span class="status-value" id="templateName">--</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">回合</span>
+            <span class="status-value">1 / 20</span>
+          </div>
+        </div>
+        <div class="status-section">
+          <h4>记录</h4>
+          <div class="log-list" id="logList">
+            <div class="log-item">游戏开始</div>
+            <div class="log-item">进入第一章</div>
+            <div class="log-item">遇到神秘访客</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // ---- Game State ----
+    const character = JSON.parse(sessionStorage.getItem('character') || '{}');
+    const template = JSON.parse(sessionStorage.getItem('selectedTemplate') || '{}');
+    const DEFAULT_TEMPLATE = 'campus-summer';
+    document.getElementById('charName').textContent = character.name || '无名';
+    document.getElementById('charGender').textContent = character.gender || '?';
+    document.getElementById('templateName').textContent = template.title ? template.title.split('·').pop().trim() : '--';
+
+    const messages = [];
+    let apiConfig = { baseUrl: '', apiKey: '' };
+
+    // ---- DOM refs ----
+    const narrativeContent = document.getElementById('narrativeContent');
+    const choicesList = document.getElementById('choicesList');
+    const logList = document.getElementById('logList');
+    const customInput = document.getElementById('customInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // ---- Helper: append log ----
+    function addLog(text) {
+      const entry = document.createElement('div');
+      entry.className = 'log-item';
+      entry.textContent = text;
+      logList.appendChild(entry);
+      logList.scrollTop = logList.scrollHeight;
+    }
+
+    // ---- Helper: append narrative text ----
+    function appendNarration(text) {
+      const p = document.createElement('p');
+      p.textContent = text;
+      narrativeContent.appendChild(p);
+      narrativeContent.scrollTop = narrativeContent.scrollHeight;
+    }
+
+    // ---- Parse LLM response into narration + choices ----
+    function renderResponse(text) {
+      const lines = text.split('\n').filter(l => l.trim());
+      const optionLines = [];
+      const narrationLines = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        // Match option lines: "1.【..." or "1. ..." or "0.【自由行动】"
+        if (/^\d+[\.\】]/.test(trimmed) || /^\d+\.\s*[【「]/.test(trimmed)) {
+          optionLines.push(trimmed);
+        } else if (/^❤/.test(trimmed) || /^\[GALGAME STATE\]/.test(trimmed) || /^Scene:/.test(trimmed) || /^🏁/.test(trimmed) || /^Progress:/.test(trimmed) || /^Recent:/.test(trimmed)) {
+          // Skip state card lines — we could parse them later
+        } else {
+          narrationLines.push(trimmed);
+        }
+      }
+
+      // Display narration
+      narrativeContent.innerHTML = '';
+      for (const line of narrationLines) {
+        if (line.startsWith('###')) {
+          const h = document.createElement('h3');
+          h.textContent = line.replace(/^###\s*/, '');
+          narrativeContent.appendChild(h);
+        } else {
+          const p = document.createElement('p');
+          p.textContent = line;
+          narrativeContent.appendChild(p);
+        }
+      }
+      narrativeContent.scrollTop = narrativeContent.scrollHeight;
+
+      // Display choices
+      choicesList.innerHTML = '';
+      if (optionLines.length === 0) {
+        // If no options, add a "continue" button
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.innerHTML = '<span class="choice-text">继续</span><span class="choice-hint">继续</span>';
+        btn.addEventListener('click', () => sendMessage('继续'));
+        choicesList.appendChild(btn);
+      } else {
+        for (const opt of optionLines) {
+          const btn = document.createElement('button');
+          btn.className = 'choice-btn';
+          const text = opt.replace(/^\d+[\.\】]\s*/, '').replace(/（.*）$/, '').trim();
+          const hint = opt.match(/（(.+)）/);
+          btn.innerHTML = `<span class="choice-text">${escapeHtml(text)}</span><span class="choice-hint">${hint ? escapeHtml(hint[1]) : '选择'}</span>`;
+          btn.addEventListener('click', () => sendMessage(opt));
+          choicesList.appendChild(btn);
+        }
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ---- Send message to LLM ----
+    async function sendMessage(userText) {
+      // Add user message
+      messages.push({ role: 'user', content: userText });
+
+      // Show in log
+      addLog('你：' + (userText.length > 40 ? userText.slice(0, 40) + '…' : userText));
+
+      // Disable choices
+      choicesList.innerHTML = '<div class="choice-placeholder">思考中…</div>';
+
+      try {
+        const response = await window.electronAPI.llm.chat(messages, {
+          baseUrl: apiConfig.baseUrl,
+          apiKey: apiConfig.apiKey,
+          model: 'deepseek-chat',
+          temperature: 0.7,
+          maxTokens: 1024
+        });
+        messages.push({ role: 'assistant', content: response });
+        renderResponse(response);
+      } catch (e) {
+        appendNarration('[出错了] ' + e.message);
+        choicesList.innerHTML = '<button class="choice-btn" onclick="sendMessage(\'继续\')"><span class="choice-text">重试</span></button>';
+      }
+    }
+
+    // ---- Custom input ----
+    if (customInput && sendBtn) {
+      sendBtn.addEventListener('click', () => {
+        const text = customInput.value.trim();
+        if (text) {
+          customInput.value = '';
+          sendMessage(text);
+        }
+      });
+      customInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendBtn.click();
+      });
+    }
+
+    // ---- Initialize game ----
+    async function initGame() {
+      narrativeContent.innerHTML = '<p style="color:#7b7ba8">正在加载剧本…</p>';
+
+      // Load API config
+      try {
+        apiConfig = await window.electronAPI.apiKey.load();
+      } catch (e) {
+        apiConfig = { baseUrl: 'https://api.deepseek.com/v1', apiKey: '' };
+      }
+
+      // Determine template ID
+      const templateId = template.id || DEFAULT_TEMPLATE;
+
+      // Build system prompt
+      let storyContent = '';
+      try {
+        const storyMdPath = templateId + '/story/main.md';
+        storyContent = await window.electronAPI.fs.read(storyMdPath);
+      } catch (e) {
+        storyContent = '一个关于青春与回忆的校园故事。';
+      }
+
+      const systemPrompt = `你是 AI AVG 游戏引擎。你的角色是旁白 + 所有 NPC + 系统面板。
+
+故事设定：
+${storyContent}
+
+主角信息：
+名字：${character.name || '你'}
+性别：${character.gender || '未知'}
+性格：${character.personality || '普通'}
+
+游戏规则：
+1. 每次输出包含：场景叙述（用文学化的第二人称"你"语言）+ 2-4个预设选项
+2. 选项格式为：1.【选项文本】2.【选项文本】3.【选项文本】0.【自由行动】
+3. 每次响应末尾附带状态卡片
+4. 用第二人称"你"叙述
+5. 场景标题用 ### 标记
+6. 选项可以包含倾向性提示，用（温和·观察）这样的括号标注
+7. 状态卡片格式：[GALGAME STATE] Scene: 场景ID | Act: 当前幕/总幕 ❤ 角色名:好感度 🏁 flag名`;
+
+      messages.push({ role: 'system', content: systemPrompt });
+
+      // Send starting signal
+      narrativeContent.innerHTML = '<p style="color:#7b7ba8">故事即将开始…</p>';
+
+      try {
+        const firstResponse = await window.electronAPI.llm.chat(messages, {
+          baseUrl: apiConfig.baseUrl,
+          apiKey: apiConfig.apiKey,
+          model: 'deepseek-chat',
+          temperature: 0.7,
+          maxTokens: 1024
+        });
+        messages.push({ role: 'assistant', content: firstResponse });
+        renderResponse(firstResponse);
+        addLog('故事开始');
+      } catch (e) {
+        narrativeContent.innerHTML = '<p style="color:#f87171">API 连接失败: ' + escapeHtml(e.message) + '</p><p style="color:#7b7ba8;margin-top:12px">请先在设置页面配置 API Key。</p>';
+        choicesList.innerHTML = '<button class="choice-btn" onclick="window.electronAPI.navigate.to(\'index\')"><span class="choice-text">返回设置</span></button>';
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

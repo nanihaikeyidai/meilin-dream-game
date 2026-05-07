@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>选择剧本</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page templates-page">
+    <div class="page-header">
+      <h1>选择剧本</h1>
+      <p class="subtitle">选择一个世界，开启你的故事</p>
+    </div>
+    <div class="templates-grid" id="templatesGrid">
+      <div class="template-card skeleton">
+        <div class="template-card-header">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-tags"></div>
+        </div>
+        <div class="template-card-body">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
+      <div class="template-card skeleton">
+        <div class="template-card-header">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-tags"></div>
+        </div>
+        <div class="template-card-body">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
+      <div class="template-card skeleton">
+        <div class="template-card-header">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-tags"></div>
+        </div>
+        <div class="template-card-body">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
+      <div class="template-card skeleton">
+        <div class="template-card-header">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-tags"></div>
+        </div>
+        <div class="template-card-body">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function loadTemplates() {
+      const grid = document.getElementById('templatesGrid');
+      try {
+        const templates = await window.electronAPI.templates.list();
+        grid.innerHTML = '';
+        templates.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'template-card';
+          card.innerHTML = `
+            <div class="template-card-header">
+              <h3>${escapeHtml(t.title)}</h3>
+              <span class="template-tags">${escapeHtml(t.tags)}</span>
+            </div>
+            <div class="template-card-body">
+              <p>${escapeHtml(t.description)}</p>
+              <button class="btn-primary btn-select">选择此剧本</button>
+            </div>
+          `;
+          card.querySelector('.btn-select').addEventListener('click', () => {
+            sessionStorage.setItem('selectedTemplate', JSON.stringify(t));
+            window.electronAPI.navigate.to('character');
+          });
+          grid.appendChild(card);
+        });
+      } catch (e) {
+        grid.innerHTML = '<p class="load-error">加载剧本列表失败：' + escapeHtml(e.message) + '</p>';
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    loadTemplates();
+  </script>
+</body>
+</html>
