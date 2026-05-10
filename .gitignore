@@ -26,3 +26,10 @@ launcher/start.sh
 
 # Galgame save files (player data)
 .galgame/
+
+# Dependencies
+node_modules/
+
+# Temp test files
+frontend/auto_test.html
+frontend/demo.html

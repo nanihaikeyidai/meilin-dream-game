@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 340" width="220" height="340">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="glow" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#c0c0e0;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#c0c0e0;stop-opacity:0" />
+    </linearGradient>
+  </defs>
+  <rect width="220" height="340" rx="12" fill="url(#bg)" />
+  <rect width="220" height="340" rx="12" fill="url(#glow)" />
+  <text x="110" y="80" text-anchor="middle" font-size="60" fill="#c0c0e0" opacity="0.3">⚔️</text>
+  <text x="110" y="280" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#c0c0e0" opacity="0.7">谢云岚</text>
+  <text x="110" y="305" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#c0c0e0" opacity="0.5">开心</text>
+  <rect x="50" y="100" width="120" height="140" rx="60" fill="#c0c0e0" opacity="0.12" />
+  <rect x="65" y="115" width="90" height="110" rx="45" fill="#c0c0e0" opacity="0.08" />
+  <!-- Decorative line -->
+  <line x1="30" y1="320" x2="190" y2="320" stroke="#c0c0e0" stroke-width="0.5" opacity="0.3" />
+</svg>

@@ -32,6 +32,15 @@
             autocomplete="off"
           >
         </div>
+        <div class="form-group">
+          <label for="modelName">模型名称</label>
+          <input
+            type="text"
+            id="modelName"
+            placeholder="deepseek-chat"
+            autocomplete="off"
+          >
+        </div>
         <div class="form-actions">
           <button id="saveBtn" class="btn-primary">保存配置</button>
           <span id="statusMsg" class="status-msg"></span>
@@ -46,8 +55,16 @@
   <script>
     const baseUrlInput = document.getElementById('baseUrl');
     const apiKeyInput = document.getElementById('apiKey');
+    const modelNameInput = document.getElementById('modelName');
     const saveBtn = document.getElementById('saveBtn');
     const statusMsg = document.getElementById('statusMsg');
+
+    // DeepSeek 默认配置（从 Hermes 配置抄的）
+    const DEEPSEEK_DEFAULTS = {
+      baseUrl: 'https://api.deepseek.com/v1',
+      apiKey: 'sk-8058cebe1be14578a23ee02b80ba706c66b4b',
+      model: 'deepseek-chat'
+    };
 
     function showStatus(msg, isError) {
       statusMsg.textContent = msg;
@@ -58,9 +75,15 @@
     async function loadConfig() {
       try {
         const config = await window.electronAPI.apiKey.load();
-        if (config) {
+        if (config && config.baseUrl) {
           baseUrlInput.value = config.baseUrl || '';
           apiKeyInput.value = config.apiKey || '';
+          modelNameInput.value = config.model || DEEPSEEK_DEFAULTS.model;
+        } else {
+          // 没有保存的配置，自动填入 DeepSeek 默认
+          baseUrlInput.value = DEEPSEEK_DEFAULTS.baseUrl;
+          apiKeyInput.value = DEEPSEEK_DEFAULTS.apiKey;
+          modelNameInput.value = DEEPSEEK_DEFAULTS.model;
         }
       } catch (e) {
         showStatus('加载配置失败', true);
@@ -70,6 +93,7 @@
     async function saveConfig() {
       const baseUrl = baseUrlInput.value.trim();
       const apiKey = apiKeyInput.value.trim();
+      const model = modelNameInput.value.trim() || DEEPSEEK_DEFAULTS.model;
 
       if (!baseUrl) {
         showStatus('请输入 Base URL', true);
@@ -84,7 +108,7 @@
       saveBtn.textContent = '保存中...';
 
       try {
-        const result = await window.electronAPI.apiKey.save({ baseUrl, apiKey });
+        const result = await window.electronAPI.apiKey.save({ baseUrl, apiKey, model });
         if (result.success) {
           showStatus('保存成功！');
         } else {

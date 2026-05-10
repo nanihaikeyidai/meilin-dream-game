@@ -63,6 +63,65 @@ function parseTemplateMeta(filePath) {
   return { title, tags, description };
 }
 
+function parseTemplateFromDir(dirPath) {
+  const storyPath = path.join(dirPath, 'story', 'main.md');
+  const templateId = path.basename(dirPath);
+
+  try {
+    if (!fs.existsSync(storyPath)) {
+      return null;
+    }
+    const content = fs.readFileSync(storyPath, 'utf8');
+    const lines = content.split('\n');
+    let title = templateId;
+    let description = '';
+    let tags = '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('# ') && !title) {
+        title = trimmed.replace(/^#\s*/, '');
+      }
+      if (trimmed.startsWith('## 类型标签') || trimmed.startsWith('**类型标签**')) {
+        continue;
+      }
+      if (!tags && trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('---') && !trimmed.startsWith('>')) {
+        // Look for tag-like content (keywords after 类型标签 heading)
+        const prevIdx = lines.indexOf(line);
+        const prev = prevIdx > 0 ? lines[prevIdx - 1].trim() : '';
+        if (prev.startsWith('## 类型标签') || prev.startsWith('**类型标签**')) {
+          tags = trimmed;
+        }
+      }
+      if (trimmed.startsWith('## 一句话简介') || trimmed.startsWith('**一句话简介**')) {
+        continue;
+      }
+      if (!description && trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('>')) {
+        const prevIdx = lines.indexOf(line);
+        const prev = prevIdx > 0 ? lines[prevIdx - 1].trim() : '';
+        if (prev.startsWith('## 一句话简介') || prev.startsWith('**一句话简介**')) {
+          description = trimmed;
+        }
+      }
+    }
+
+    // Fallback: use first paragraph as description
+    if (!description) {
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('---') && !trimmed.startsWith('>')) {
+          description = trimmed.length > 100 ? trimmed.slice(0, 100) + '…' : trimmed;
+          break;
+        }
+      }
+    }
+
+    return { id: templateId, title, tags, description };
+  } catch {
+    return null;
+  }
+}
+
 function setupIpcHandlers() {
   ipcMain.handle('apiKey:save', (event, data) => {
     setConfig('apiConfig', data);
@@ -70,17 +129,35 @@ function setupIpcHandlers() {
   });
 
   ipcMain.handle('apiKey:load', () => {
-    return getConfig('apiConfig', { baseUrl: '', apiKey: '' });
+    return getConfig('apiConfig', { baseUrl: '', apiKey: '', model: '' });
   });
 
   ipcMain.handle('templates:list', () => {
     const templatesDir = path.join(__dirname, '..', 'templates');
-    const files = fs.readdirSync(templatesDir).filter(f => f.endsWith('.md') && f !== 'perspective-template.md');
-    return files.map(f => {
-      const id = f.replace('.md', '');
-      const meta = parseTemplateMeta(path.join(templatesDir, f));
-      return { id, ...meta };
-    });
+    const entries = fs.readdirSync(templatesDir, { withFileTypes: true });
+    const templates = [];
+
+    // First try subdirectories (each template is a dir with story/main.md)
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        const meta = parseTemplateFromDir(path.join(templatesDir, entry.name));
+        if (meta) {
+          templates.push(meta);
+        }
+      }
+    }
+
+    // Fallback: try flat .md files (old format)
+    if (templates.length === 0) {
+      const mdFiles = entries.filter(e => e.isFile() && e.name.endsWith('.md'));
+      for (const f of mdFiles) {
+        const filePath = path.join(templatesDir, f.name);
+        const meta = parseTemplateMeta(filePath);
+        templates.push({ id: f.name.replace('.md', ''), ...meta });
+      }
+    }
+
+    return templates;
   });
 
   ipcMain.handle('fs:read', (event, filePath) => {
