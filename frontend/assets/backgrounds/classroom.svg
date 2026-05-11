@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c9a96e"/>
+      <stop offset="50%" stop-color="#a0835a"/>
+      <stop offset="100%" stop-color="#5c4a3a"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5e6d0"/>
+      <stop offset="100%" stop-color="#e8d5b8"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8b7355"/>
+      <stop offset="100%" stop-color="#6b5b45"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#87ceeb"/>
+      <stop offset="100%" stop-color="#b0d4e8"/>
+    </linearGradient>
+    <radialGradient id="sunlight" cx="0.3" cy="0" r="0.6">
+      <stop offset="0%" stop-color="rgba(255,240,200,0.3)"/>
+      <stop offset="100%" stop-color="rgba(255,240,200,0)"/>
+    </radialGradient>
+    <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c9a86a"/>
+      <stop offset="100%" stop-color="#a88850"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky through windows -->
+  <rect x="0" y="0" width="1280" height="280" fill="url(#sky)"/>
+  
+  <!-- Classroom Wall -->
+  <rect x="0" y="0" width="1280" height="380" fill="url(#wall)"/>
+  
+  <!-- Floor -->
+  <rect x="0" y="380" width="1280" height="340" fill="url(#floor)"/>
+  
+  <!-- Floor lines -->
+  <line x1="0" y1="420" x2="1280" y2="420" stroke="#7a6a50" stroke-width="1" opacity="0.3"/>
+  <line x1="0" y1="480" x2="1280" y2="480" stroke="#7a6a50" stroke-width="1" opacity="0.3"/>
+  <line x1="0" y1="550" x2="1280" y2="550" stroke="#7a6a50" stroke-width="1" opacity="0.3"/>
+  <line x1="0" y1="630" x2="1280" y2="630" stroke="#7a6a50" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Windows -->
+  <rect x="30" y="30" width="180" height="240" rx="2" fill="none" stroke="#5c4a3a" stroke-width="4"/>
+  <rect x="30" y="30" width="180" height="240" rx="2" fill="#b0d4e8" opacity="0.5"/>
+  <line x1="120" y1="30" x2="120" y2="270" stroke="#5c4a3a" stroke-width="3"/>
+  <line x1="30" y1="150" x2="210" y2="150" stroke="#5c4a3a" stroke-width="3"/>
+  
+  <rect x="250" y="30" width="180" height="240" rx="2" fill="none" stroke="#5c4a3a" stroke-width="4"/>
+  <rect x="250" y="30" width="180" height="240" rx="2" fill="#b0d4e8" opacity="0.5"/>
+  <line x1="340" y1="30" x2="340" y2="270" stroke="#5c4a3a" stroke-width="3"/>
+  <line x1="250" y1="150" x2="430" y2="150" stroke="#5c4a3a" stroke-width="3"/>
+  
+  <!-- Curtains -->
+  <rect x="25" y="25" width="25" height="250" fill="#f0e6d0" opacity="0.6"/>
+  <rect x="190" y="25" width="25" height="250" fill="#f0e6d0" opacity="0.6"/>
+  <rect x="245" y="25" width="25" height="250" fill="#f0e6d0" opacity="0.6"/>
+  <rect x="410" y="25" width="25" height="250" fill="#f0e6d0" opacity="0.6"/>
+  
+  <!-- Curtain top rail -->
+  <rect x="20" y="25" width="420" height="6" rx="3" fill="#5c4a3a"/>
+  
+  <!-- Blackboard -->
+  <rect x="500" y="40" width="500" height="200" rx="4" fill="#2d5016" stroke="#5c4a3a" stroke-width="4"/>
+  <text x="620" y="120" font-family="serif" font-size="28" fill="rgba(255,255,255,0.3)">毕业快乐</text>
+  <text x="560" y="180" font-family="serif" font-size="16" fill="rgba(255,255,255,0.2)">我们各自努力 顶峰相见</text>
+  
+  <!-- Desks row 1 -->
+  <g>
+    <rect x="30" y="400" width="140" height="50" rx="3" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="30" y="450" width="140" height="4" fill="#7a6035"/>
+    <rect x="200" y="400" width="140" height="50" rx="3" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="200" y="450" width="140" height="4" fill="#7a6035"/>
+    <rect x="370" y="400" width="140" height="50" rx="3" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="370" y="450" width="140" height="4" fill="#7a6035"/>
+  </g>
+  
+  <!-- Desks row 2 -->
+  <g>
+    <rect x="30" y="510" width="140" height="50" rx="3" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="30" y="560" width="140" height="4" fill="#7a6035"/>
+    <rect x="200" y="510" width="140" height="50" rx="3" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="200" y="560" width="140" height="4" fill="#7a6035"/>
+    <rect x="370" y="510" width="140" height="50" rx="3" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="370" y="560" width="140" height="4" fill="#7a6035"/>
+  </g>
+  
+  <!-- Desks row 3 (distant, smaller) -->
+  <g opacity="0.6">
+    <rect x="650" y="420" width="100" height="36" rx="2" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="780" y="440" width="100" height="36" rx="2" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+    <rect x="910" y="420" width="100" height="36" rx="2" fill="url(#desk)" stroke="#8b7040" stroke-width="2"/>
+  </g>
+  
+  <!-- Distant desks row -->
+  <g opacity="0.4">
+    <rect x="700" y="500" width="80" height="30" rx="2" fill="url(#desk)" stroke="#8b7040" stroke-width="1"/>
+    <rect x="800" y="520" width="80" height="30" rx="2" fill="url(#desk)" stroke="#8b7040" stroke-width="1"/>
+    <rect x="900" y="500" width="80" height="30" rx="2" fill="url(#desk)" stroke="#8b7040" stroke-width="1"/>
+  </g>
+  
+  <!-- Chairs -->
+  <g>
+    <rect x="160" y="405" width="28" height="45" rx="2" fill="#6b5b45" stroke="#5a4a35" stroke-width="2"/>
+    <rect x="330" y="405" width="28" height="45" rx="2" fill="#6b5b45" stroke="#5a4a35" stroke-width="2"/>
+    <rect x="160" y="515" width="28" height="45" rx="2" fill="#6b5b45" stroke="#5a4a35" stroke-width="2"/>
+    <rect x="330" y="515" width="28" height="45" rx="2" fill="#6b5b45" stroke="#5a4a35" stroke-width="2"/>
+  </g>
+  
+  <!-- Sunlight beam effect -->
+  <rect x="0" y="0" width="1280" height="720" fill="url(#sunlight)"/>
+  
+  <!-- Dust particles -->
+  <circle cx="280" cy="100" r="1.5" fill="white" opacity="0.6"/>
+  <circle cx="350" cy="180" r="1" fill="white" opacity="0.4"/>
+  <circle cx="300" cy="250" r="1.5" fill="white" opacity="0.3"/>
+  <circle cx="250" cy="140" r="1" fill="white" opacity="0.5"/>
+  <circle cx="320" cy="200" r="0.8" fill="white" opacity="0.4"/>
+  
+  <!-- Fan on ceiling -->
+  <rect x="850" y="0" width="60" height="8" rx="2" fill="#888"/>
+  <circle cx="880" cy="8" r="4" fill="#666"/>
+</svg>

@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 8080;
-const LLM_BASE = process.env.LLM_BASE || 'http://192.168.1.2:8555';
+const LLM_BASE = process.env.LLM_BASE || 'http://localhost:8642';
 const FRONTEND_DIR = path.join(__dirname, 'frontend');
 
 const MIME_TYPES = {

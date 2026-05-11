@@ -2,309 +2,298 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>夏日的回音 — AI AVG</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>夏日的回音 — AI Visual Novel</title>
   <style>
-    /* ===== 游戏主布局 ===== */
+    /* ===== Reset & Base ===== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; font-family: 'Microsoft YaHei','PingFang SC',sans-serif; }
-    body { background: #0f0c29; color: #d4d4ea; }
-    .game-layout {
-      display: grid;
-      grid-template-columns: 240px 1fr 220px;
-      grid-template-rows: 1fr auto;
-      gap: 12px;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 12px 16px;
-      height: 100vh;
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif; background: #000; color: #fff; user-select: none; }
+
+    /* ===== 开始画面（覆盖层） ===== */
+    #startOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      animation: fadeIn 0.8s ease-out; color: #fff;
+    }
+    #startOverlay .inner { text-align: center; max-width: 420px; padding: 20px; animation: fadeInUp 1s ease-out; }
+    #startOverlay .sub { font-size: 13px; letter-spacing: 6px; color: rgba(200,190,255,.6); margin-bottom: 12px; }
+    #startOverlay .title {
+      font-size: 44px; font-weight: 700; letter-spacing: 12px;
+      background: linear-gradient(135deg,#e8d5ff,#8ec5fc,#e0c3fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 10px;
+    }
+    #startOverlay .desc { font-size: 12px; color: rgba(255,255,255,.4); letter-spacing: 3px; margin-bottom: 30px; line-height: 1.8; }
+    #startOverlay label { display: block; font-size: 11px; color: rgba(200,180,255,.5); letter-spacing: 2px; margin-bottom: 6px; text-align: left; }
+    #startOverlay input {
+      width: 100%; padding: 10px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
+      border-radius: 6px; color: #fff; font-size: 15px; font-family: inherit; letter-spacing: 2px;
+      outline: none; text-align: center; margin-bottom: 16px;
+    }
+    #startOverlay input:focus { border-color: rgba(200,180,255,.4); }
+    .personality-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 20px; }
+    .pers-opt {
+      padding: 10px 8px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 6px; cursor: pointer; text-align: center; transition: all .2s;
+      font-size: 13px; letter-spacing: 1px; color: rgba(255,255,255,.7);
+    }
+    .pers-opt:hover { background: rgba(255,255,255,.1); border-color: rgba(200,180,255,.3); }
+    .pers-opt.selected { background: rgba(200,180,255,.12); border-color: rgba(200,180,255,.5); }
+    .pers-opt .emoji { font-size: 18px; display: block; margin-bottom: 2px; }
+    .btn-start {
+      width: 100%; padding: 12px 0; background: rgba(200,180,255,.15); border: 1px solid rgba(200,180,255,.3);
+      border-radius: 6px; color: #fff; font-size: 15px; letter-spacing: 6px; cursor: pointer;
+      font-family: inherit; transition: all .3s;
+    }
+    .btn-start:hover { background: rgba(200,180,255,.25); }
+
+    /* ===== 游戏主界面 ===== */
+    #gameScreen {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      display: none; /* shown after startGame */
     }
 
-    /* 立绘面板（左侧） */
-    .portrait-panel {
-      grid-row: 1 / 3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding-top: 20px;
+    /* 背景层 */
+    .bg-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0;
     }
-    .portrait-frame {
-      width: 200px;
-      height: 350px;
-      background: rgba(255,255,255,.03);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+    #bgImage {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: opacity 1.2s ease;
     }
-    .portrait-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .portrait-placeholder { text-align: center; color: rgba(255,255,255,.2); }
-    .placeholder-icon { font-size: 48px; margin-bottom: 8px; }
-    .placeholder-text { font-size: 13px; letter-spacing: 2px; }
-    .portrait-name { font-size: 18px; font-weight: 600; margin: 10px 0 4px; letter-spacing: 3px; }
-    .portrait-expression { font-size: 12px; color: rgba(200,180,255,.5); letter-spacing: 2px; }
-    .portrait-fade { display: none; }
+    .bg-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.85) 100%);
+      z-index: 1;
+    }
 
-    /* 叙事区（中间） */
-    .game-narrative {
-      grid-column: 2;
-      grid-row: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: rgba(255,255,255,.02);
+    /* 人物立绘层 */
+    .character-layer {
+      position: absolute; bottom: 28%; left: 50%; transform: translateX(-50%);
+      z-index: 2; pointer-events: none;
+    }
+    #spriteImage {
+      max-height: 62vh; width: auto;
+      opacity: 0; transition: opacity 0.8s ease;
+      filter: drop-shadow(0 0 20px rgba(0,0,0,0.4));
+    }
+    #spriteImage.visible { opacity: 1; }
+
+    /* 文本框 - 底部覆盖 */
+    .text-layer {
+      position: absolute; bottom: 0; left: 0; width: 100%;
+      z-index: 5; pointer-events: none;
+    }
+    .text-window {
+      position: relative; margin: 0 auto; max-width: 860px;
+      padding: 18px 28px 28px; pointer-events: auto;
+    }
+    .text-bg {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.88) 100%);
+      border-radius: 12px 12px 0 0; backdrop-filter: blur(8px);
       border: 1px solid rgba(255,255,255,.06);
-      border-radius: 10px;
-      padding: 20px;
+      border-bottom: none;
     }
-    .narrative-header { margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .narrative-header h2 { color: #fff; font-size: 1.2em; }
-    .chapter-tag { background: #6c5ce7; padding: 2px 10px; border-radius: 4px; font-size: 0.8em; color: #fff; }
-    .narrative-content {
-      flex: 1;
-      overflow-y: auto;
-      padding-right: 8px;
-      line-height: 1.8;
-      font-size: 14px;
+    .text-inner { position: relative; z-index: 1; }
+    .text-name {
+      font-size: 15px; font-weight: 600; letter-spacing: 2px;
+      color: #c8b4ff; margin-bottom: 6px; display: none;
     }
-    .narrative-content p { margin-bottom: 0.6em; color: #d4d4ea; }
-    .narrative-fade { display: none; }
+    .text-name.visible { display: block; }
+    .text-body {
+      font-size: 15px; line-height: 1.8; color: rgba(255,255,255,.88);
+      min-height: 4.2em; max-height: 8em; overflow: hidden;
+      position: relative;
+    }
+    .text-body p { margin-bottom: 0.4em; }
+    .text-body .scene-title {
+      font-size: 13px; color: rgba(200,180,255,.6); letter-spacing: 3px;
+      margin-bottom: 8px; display: block;
+    }
+    .text-next {
+      text-align: right; font-size: 12px; color: rgba(200,180,255,.4);
+      letter-spacing: 2px; margin-top: 6px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.8; } }
 
-    /* 选项区（中间下方） */
-    .game-choices {
-      grid-column: 2;
-      grid-row: 2;
-      padding-top: 4px;
+    /* 点击翻页区域 */
+    .click-area {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 3; cursor: pointer;
     }
-    .choices-header { font-size: 12px; color: rgba(200,180,255,.5); letter-spacing: 3px; margin-bottom: 8px; }
-    .choices-list { display: flex; flex-direction: column; gap: 6px; }
-    .choices-custom { display: flex; gap: 8px; margin-top: 10px; }
 
-    /* 状态面板（右侧） */
-    .game-status {
-      grid-column: 3;
-      grid-row: 1 / 3;
-      overflow-y: auto;
+    /* 选项覆盖层 */
+    .choices-overlay {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      z-index: 10; max-width: 600px; width: 90%;
+      display: none; flex-direction: column; gap: 8px;
     }
-    .status-panel { display: flex; flex-direction: column; gap: 14px; }
-    .status-section { background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 14px; }
-    .status-section h4 { font-size: 11px; color: rgba(200,180,255,.5); letter-spacing: 3px; margin-bottom: 10px; }
-    .status-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
-    .status-label { color: rgba(255,255,255,.35); }
-    .status-value { color: #d4d4ea; }
-    .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; }
-    .status-bar-label { width: 32px; color: rgba(255,255,255,.35); }
-    .status-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
-    .status-bar-fill { height: 100%; background: #6c5ce7; border-radius: 3px; transition: width .5s; }
-    .status-bar-fill-warn { background: #f59e0b; }
-    .status-bar-fill-love { background: #ec4899; }
-    .status-bar-value { width: 28px; text-align: right; color: rgba(255,255,255,.5); }
-    .log-list { max-height: 140px; overflow-y: auto; font-size: 11px; }
-    .log-item { padding: 3px 0; color: rgba(255,255,255,.4); border-bottom: 1px solid rgba(255,255,255,.03); }
-
-    /* 按钮 */
+    .choices-overlay.visible { display: flex; }
     .choice-btn {
-      background: #1e1e2e; border: 1px solid #3d3d5c; color: #d4d4ea;
-      padding: 10px 16px; border-radius: 8px; cursor: pointer; width: 100%;
-      text-align: left; transition: all 0.2s; font-size: 13px;
+      background: rgba(30,30,46,0.85); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px; color: #d4d4ea; padding: 12px 18px;
+      text-align: left; cursor: pointer; font-size: 14px;
+      font-family: inherit; line-height: 1.5; transition: all 0.2s;
+      backdrop-filter: blur(6px);
     }
-    .choice-btn:hover { border-color: #6c5ce7; background: #2a2a3e; }
-    .choice-text { display: block; }
-    .choice-hint { font-size: 0.8em; color: #7b7ba8; margin-top: 2px; }
-    .choice-placeholder { color: #7b7ba8; text-align: center; padding: 20px; font-size: 13px; }
-    .btn-primary { background: #6c5ce7; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
-    .btn-primary:hover { background: #7c6cf7; }
-    .custom-input {
-      flex: 1; background: #1e1e2e; border: 1px solid #3d3d5c; color: #d4d4ea;
-      padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; font-family: inherit;
-    }
-    .custom-input:focus { border-color: #6c5ce7; }
+    .choice-btn:hover { border-color: #6c5ce7; background: rgba(108,92,231,0.2); transform: translateX(4px); }
+    .choice-hint { display: block; font-size: 11px; color: rgba(200,180,255,.4); margin-top: 2px; letter-spacing: 1px; }
 
-    /* 加载动画 */
-    .loading-dot { animation: blink 1s infinite; }
-    .loading-dot:nth-child(2) { animation-delay: 0.3s; }
-    .loading-dot:nth-child(3) { animation-delay: 0.6s; }
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    /* 加载状态 */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 20; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+    }
+    .loading-overlay.visible { display: flex; }
+    .loading-spinner {
+      width: 36px; height: 36px; border: 3px solid rgba(255,255,255,.1);
+      border-top-color: #c8b4ff; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: rgba(200,180,255,.6); letter-spacing: 2px; }
 
     /* 错误 */
-    .error-box { background: #2a1a1a; border: 1px solid #f87171; padding: 16px; border-radius: 8px; margin: 10px 0; color: #fca5a5; font-size: 13px; }
-    .retry-btn { background: #6c5ce7; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; margin-top: 10px; }
-    .retry-btn:hover { background: #7c6cf7; }
-
-    /* 响应式 */
-    @media (max-width: 900px) {
-      .game-layout { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; min-height: 100vh; }
-      .portrait-panel { grid-row: auto; }
-      .game-narrative { grid-column: 1; min-height: 300px; }
-      .game-choices { grid-column: 1; }
-      .game-status { grid-column: 1; }
+    .error-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 20; background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
     }
+    .error-overlay.visible { display: flex; }
+    .error-box {
+      background: rgba(42,26,26,0.9); border: 1px solid #f87171; padding: 16px 24px;
+      border-radius: 8px; color: #fca5a5; font-size: 13px; max-width: 400px; text-align: center; line-height: 1.6;
+    }
+    .btn-retry {
+      background: rgba(200,180,255,.15); border: 1px solid rgba(200,180,255,.3);
+      border-radius: 6px; color: #fff; padding: 10px 28px; cursor: pointer;
+      font-size: 13px; letter-spacing: 3px; font-family: inherit;
+    }
+    .btn-retry:hover { background: rgba(200,180,255,.25); }
+
+    /* 自定义输入 (hidden by default, shown via setting) */
+    .custom-input-area {
+      position: fixed; bottom: 80px; right: 20px; z-index: 8;
+      display: none;
+    }
+    #toggleCustomBtn {
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 50%; width: 36px; height: 36px;
+      color: rgba(255,255,255,.3); cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+    }
+    #toggleCustomBtn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.6); }
+
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
   </style>
 </head>
 <body>
-  <!-- ============ 开始画面（覆盖层） ============ -->
-  <div id="startOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;flex-direction:column;animation:fadeIn 0.8s ease-out;font-family:'Microsoft YaHei','PingFang SC',sans-serif;color:#fff;">
-    <div style="text-align:center;max-width:480px;padding:20px;animation:fadeInUp 1s ease-out;">
-      <div style="font-size:14px;letter-spacing:6px;color:rgba(200,190,255,.6);margin-bottom:16px;">—— AI AVG ——</div>
-      <div style="font-size:48px;font-weight:700;letter-spacing:12px;background:linear-gradient(135deg,#e8d5ff,#8ec5fc,#e0c3fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">夏日的回音</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.4);letter-spacing:3px;margin-bottom:36px;line-height:1.8;">高三毕业的夏天 · 一场没人说出口的约定</div>
-      <div style="margin-bottom:24px;text-align:left;">
-        <div style="font-size:12px;color:rgba(200,180,255,.5);letter-spacing:2px;margin-bottom:8px;">你的名字</div>
-        <input type="text" id="playerName" value="陈远" maxlength="8" style="width:100%;padding:12px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:16px;font-family:inherit;letter-spacing:2px;outline:none;text-align:center;">
-      </div>
-      <div style="margin-bottom:24px;">
-        <div style="font-size:12px;color:rgba(200,180,255,.5);letter-spacing:2px;margin-bottom:10px;">你的性格底色</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div class="start-opt" data-val="silent" onclick="selectStartAttr(this)" style="padding:14px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;font-size:14px;letter-spacing:2px;">
-            <div style="font-size:20px;margin-bottom:4px;">🧊</div>沉默寡言
-          </div>
-          <div class="start-opt" data-val="cheerful" onclick="selectStartAttr(this)" style="padding:14px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;font-size:14px;letter-spacing:2px;">
-            <div style="font-size:20px;margin-bottom:4px;">☀️</div>活泼开朗
-          </div>
-          <div class="start-opt selected" data-val="gentle" onclick="selectStartAttr(this)" style="padding:14px 12px;background:rgba(200,180,255,.1);border:1px solid rgba(200,180,255,.4);border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;font-size:14px;letter-spacing:2px;">
-            <div style="font-size:20px;margin-bottom:4px;">🌙</div>温柔体贴
-          </div>
-          <div class="start-opt" data-val="tsundere" onclick="selectStartAttr(this)" style="padding:14px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;font-size:14px;letter-spacing:2px;">
-            <div style="font-size:20px;margin-bottom:4px;">🔥</div>傲娇毒舌
-          </div>
-        </div>
-      </div>
-      <button onclick="startGame()" style="width:100%;padding:14px 0;background:rgba(200,180,255,.15);border:1px solid rgba(200,180,255,.3);border-radius:8px;color:#fff;font-size:16px;letter-spacing:6px;cursor:pointer;font-family:inherit;transition:all .3s;">
-        开始故事 →
-      </button>
+
+<!-- ===== 开始画面 ===== -->
+<div id="startOverlay">
+  <div class="inner">
+    <div class="sub">—— AI Visual Novel ——</div>
+    <div class="title">夏日的回音</div>
+    <div class="desc">高三毕业的夏天 · 一场没人说出口的约定</div>
+    <label>你的名字</label>
+    <input type="text" id="playerName" value="陈远" maxlength="8">
+    <label>你的性格底色</label>
+    <div class="personality-grid">
+      <div class="pers-opt" data-val="silent" onclick="selectPers(this)"><span class="emoji">🧊</span>沉默寡言</div>
+      <div class="pers-opt" data-val="cheerful" onclick="selectPers(this)"><span class="emoji">☀️</span>活泼开朗</div>
+      <div class="pers-opt selected" data-val="gentle" onclick="selectPers(this)"><span class="emoji">🌙</span>温柔体贴</div>
+      <div class="pers-opt" data-val="tsundere" onclick="selectPers(this)"><span class="emoji">🔥</span>傲娇毒舌</div>
     </div>
+    <button class="btn-start" onclick="startGame()">开始故事 →</button>
   </div>
-  <style>
-    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-    @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
-    .start-opt:hover { background:rgba(255,255,255,.1)!important; border-color:rgba(200,180,255,.3)!important; }
-    .start-opt.selected { background:rgba(200,180,255,.1)!important; border-color:rgba(200,180,255,.5)!important; }
-    #playerName:focus { border-color:rgba(200,180,255,.4); }
-  </style>
+</div>
 
-  <div class="game-layout">
-    <!-- ============ 立绘面板 ============ -->
-    <div class="portrait-panel" id="portraitPanel" style="display:none;">
-      <div class="portrait-frame" id="portraitFrame">
-        <img id="portraitImage" class="portrait-img" src="" alt="角色立绘" style="display:none;">
-        <div class="portrait-placeholder" id="portraitPlaceholder">
-          <div class="placeholder-icon">🎭</div>
-          <div class="placeholder-text">等角色登场</div>
-        </div>
-      </div>
-      <div class="portrait-name" id="portraitName">——</div>
-      <div class="portrait-expression" id="portraitExpression"></div>
-    </div>
+<!-- ===== 游戏主界面 ===== -->
+<div id="gameScreen">
+  <!-- 背景 -->
+  <div class="bg-layer">
+    <img id="bgImage" src="assets/backgrounds/classroom.svg" alt="背景">
+    <div class="bg-overlay"></div>
+  </div>
 
-    <div class="game-narrative">
-      <div class="narrative-header">
-        <span class="chapter-tag">第一章</span>
-        <h2 id="sceneTitle">夏日的回音</h2>
-      </div>
-      <div class="narrative-content" id="narrativeContent">
-        <p style="color:#7b7ba8">正在加载剧本…</p>
-      </div>
-    </div>
+  <!-- 人物立绘 -->
+  <div class="character-layer">
+    <img id="spriteImage" src="" alt="立绘">
+  </div>
 
-    <div class="game-choices">
-      <div class="choices-header">
-        <span>你的选择</span>
-      </div>
-      <div class="choices-list" id="choicesList">
-        <div class="choice-placeholder">故事即将开始</div>
-      </div>
-      <div class="choices-custom">
-        <input type="text" id="customInput" class="custom-input" placeholder="或者自己输入对话/行动…" autocomplete="off">
-        <button id="sendBtn" class="btn-primary" style="padding:8px 20px;">发送</button>
-      </div>
-    </div>
+  <!-- 点击翻页区域 -->
+  <div class="click-area" id="clickArea" onclick="advancePage()"></div>
 
-    <div class="game-status">
-      <div class="status-panel">
-        <div class="status-section">
-          <h4>角色</h4>
-          <div class="status-item">
-            <span class="status-label">名字</span>
-            <span class="status-value" id="charName">你</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">性别</span>
-            <span class="status-value" id="charGender">--</span>
-          </div>
-        </div>
-        <div class="status-section">
-          <h4>状态</h4>
-          <div class="status-bar">
-            <span class="status-bar-label">体力</span>
-            <div class="status-bar-track"><div class="status-bar-fill" id="staminaBar" style="width: 85%"></div></div>
-            <span class="status-bar-value" id="staminaVal">85</span>
-          </div>
-          <div class="status-bar">
-            <span class="status-bar-label">精神</span>
-            <div class="status-bar-track"><div class="status-bar-fill status-bar-fill-warn" id="mindBar" style="width: 60%"></div></div>
-            <span class="status-bar-value" id="mindVal">60</span>
-          </div>
-          <div class="status-bar">
-            <span class="status-bar-label">好感</span>
-            <div class="status-bar-track"><div class="status-bar-fill status-bar-fill-love" id="affectionBar" style="width: 15%"></div></div>
-            <span class="status-value" id="affectionVal">15</span>
-          </div>
-        </div>
-        <div class="status-section">
-          <h4>剧本</h4>
-          <div class="status-item">
-            <span class="status-label">当前</span>
-            <span class="status-value">夏日的回音</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">回合</span>
-            <span class="status-value" id="turnCount">0</span>
-          </div>
-        </div>
-        <div class="status-section">
-          <h4>记录</h4>
-          <div class="log-list" id="logList">
-            <div class="log-item">游戏开始</div>
-          </div>
-        </div>
+  <!-- 文本框 -->
+  <div class="text-layer">
+    <div class="text-window">
+      <div class="text-bg"></div>
+      <div class="text-inner">
+        <div class="text-name" id="textName"></div>
+        <div class="text-body" id="textBody"><p style="color:rgba(200,180,255,.4)">故事即将开始…</p></div>
+        <div class="text-next" id="textNext">▼ 点击继续</div>
       </div>
     </div>
   </div>
 
-  <script>
-    // ======================== START SCREEN ========================
-    let playerAttrs = { name: '陈远', personality: 'gentle' };
+  <!-- 选项覆盖 -->
+  <div class="choices-overlay" id="choicesOverlay"></div>
 
-    function selectStartAttr(el) {
-      document.querySelectorAll('.start-opt').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      playerAttrs.personality = el.dataset.val;
-    }
+  <!-- 加载中 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">故事正在展开…</div>
+  </div>
 
-    function startGame() {
-      const name = document.getElementById('playerName').value.trim() || '陈远';
-      playerAttrs.name = name;
-      document.getElementById('startOverlay').style.display = 'none';
-      document.getElementById('charName').textContent = name;
-      initGame();
-    }
+  <!-- 错误 -->
+  <div class="error-overlay" id="errorOverlay">
+    <div class="error-box" id="errorText">连接失败</div>
+    <button class="btn-retry" onclick="retryGame()">重新加载</button>
+  </div>
 
-    document.getElementById('playerName').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') startGame();
-    });
+  <!-- 自定义输入按钮 -->
+  <div class="custom-input-area">
+    <button id="toggleCustomBtn" onclick="toggleCustomInput()" title="自由输入">✎</button>
+  </div>
+</div>
 
-    // ======================== CONFIG ========================
-    // Same-origin API proxy (runs on port 8649, forwards to Gateway :8642)
-    const API_BASE_URL = '/proxy';
-    const API_KEY = '';
-    const MODEL = 'deepseek-v4-flash';
+<script>
+// ======================== 开始画面 ========================
+let playerAttrs = { name: '陈远', personality: 'gentle' };
 
-    // ======================== STORY DATA ========================
-    const STORY_CONTENT = `# 模板 A：校园青春 · 夏日的回音（活动版）
+function selectPers(el) {
+  document.querySelectorAll('.pers-opt').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  playerAttrs.personality = el.dataset.val;
+}
+
+function startGame() {
+  const name = document.getElementById('playerName').value.trim() || '陈远';
+  playerAttrs.name = name;
+  document.getElementById('startOverlay').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  initGame();
+}
+
+document.getElementById('playerName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame();
+});
+
+// ======================== 配置 ========================
+const API_BASE_URL = '/proxy';
+const API_KEY = '';
+const MODEL = 'deepseek-v4-flash';
+
+// ======================== 故事数据 ========================
+const STORY_CONTENT = `# 模板 A：校园青春 · 夏日的回音（活动版）
 
 ## 类型标签
 青春 / 治愈 / 悬疑 / 纯爱 / 群像
@@ -323,245 +312,364 @@
 ## 活动推进机制
 游戏以校园活动为节奏：①返校日·重逢 → ②校园大扫除 → ③旧照片展 → ④天台夏夜会 → ⑤社团文化祭 → ⑥星空下的坦白 → ⑦夏日祭·告别`;
 
-    const ROLE_CARDS = {
-      '林雪': { id: 'linxue', desc: '温柔内敛的班长，你的三年同桌。黑长直，白裙，细框眼镜。她是整件事中距离真相最近的人。' },
-      '苏云溪': { id: 'suyunxi', desc: '开朗活泼的青梅竹马。短发，运动系。一句无心的话改变了所有人的命运。' },
-      '沈清辞': { id: 'shenqingci', desc: '沉默寡言的摄影少女。清瘦，刘海遮脸，总挂着相机。她的相机里藏着最后的底牌。' },
-      '夏知遥': { id: 'xiazhiyao', desc: '外冷内热的学生会副会长。高马尾，校服最整洁。她用违规之手保护了你。' },
-      '江晓渔': { id: 'jiangxiaoyu', desc: '元气跳脱的转学生。最像局外人的人，反而最清醒。' },
-      '程念慈': { id: 'chengnianci', desc: '实习音乐老师。沉默的见证者。' },
-      '叶小满': { id: 'yexiaoman', desc: '神秘学妹。追猎真相的人。' }
-    };
+const PORTRAIT_CHARACTERS = {
+  '林雪': 'linxue', '苏云溪': 'suyunxi', '沈清辞': 'shenqingci',
+  '夏知遥': 'xiazhiyao', '江晓渔': 'jiangxiaoyu', '程念慈': 'chengnianci', '叶小满': 'yexiaoman'
+};
+const EXPRESSION_KEYWORDS = {
+  '微笑': 'smile', '浅笑': 'smile', '轻笑': 'smile', '温柔': 'smile',
+  '开心': 'happy', '大笑': 'happy', '笑出声': 'happy', '愉快': 'happy',
+  '生气': 'angry', '愤怒': 'angry', '怒': 'angry', '冷眼': 'angry', '厉声': 'angry',
+  '悲伤': 'sad', '伤心': 'sad', '哭': 'sad', '泪': 'sad', '哽咽': 'sad', '难过': 'sad',
+  '惊讶': 'surprised', '震惊': 'surprised', '愣': 'surprised', '怔': 'surprised', '难以置信': 'surprised',
+  '脸红': 'blush', '害羞': 'blush', '羞涩': 'blush', '心动': 'blush',
+  '冷漠': 'cold', '冷淡': 'cold', '面无表情': 'cold', '冰冷': 'cold', '疏离': 'cold',
+};
 
-    const PORTRAIT_CHARACTERS = {
-      '林雪': 'linxue', '苏云溪': 'suyunxi', '沈清辞': 'shenqingci',
-      '夏知遥': 'xiazhiyao', '江晓渔': 'jiangxiaoyu', '程念慈': 'chengnianci', '叶小满': 'yexiaoman'
-    };
-    const EXPRESSION_KEYWORDS = {
-      '微笑': 'smile', '浅笑': 'smile', '轻笑': 'smile', '温柔': 'smile',
-      '开心': 'happy', '大笑': 'happy', '笑出声': 'happy', '愉快': 'happy',
-      '生气': 'angry', '愤怒': 'angry', '怒': 'angry', '冷眼': 'angry', '厉声': 'angry',
-      '悲伤': 'sad', '伤心': 'sad', '哭': 'sad', '泪': 'sad', '哽咽': 'sad', '难过': 'sad',
-      '惊讶': 'surprised', '震惊': 'surprised', '愣': 'surprised', '怔': 'surprised', '难以置信': 'surprised',
-      '脸红': 'blush', '害羞': 'blush', '羞涩': 'blush', '心动': 'blush',
-      '冷漠': 'cold', '冷淡': 'cold', '面无表情': 'cold', '冰冷': 'cold', '疏离': 'cold',
-    };
+// ======================== 状态 ========================
+const messages = [];
+let turnCount = 0;
+let currentCharName = null;
+let currentCharId = null;
+let currentExpression = 'default';
+let currentPage = -1;
+let currentPages = [];
+let awaitingChoice = false;
+// 临时输入框
+let customInputVisible = false;
 
-    // ======================== STATE ========================
-    const messages = [];
-    let turnCount = 0;
-    let currentChar = null;
-    let portraitExpression = 'default';
+// ======================== DOM ========================
+const bgImage = document.getElementById('bgImage');
+const spriteImage = document.getElementById('spriteImage');
+const textBody = document.getElementById('textBody');
+const textName = document.getElementById('textName');
+const textNext = document.getElementById('textNext');
+const clickArea = document.getElementById('clickArea');
+const choicesOverlay = document.getElementById('choicesOverlay');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const errorOverlay = document.getElementById('errorOverlay');
+const errorText = document.getElementById('errorText');
 
-    // ======================== DOM ========================
-    const narrativeContent = document.getElementById('narrativeContent');
-    const choicesList = document.getElementById('choicesList');
-    const logList = document.getElementById('logList');
-    const customInput = document.getElementById('customInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const turnEl = document.getElementById('turnCount');
-    const portraitImage = document.getElementById('portraitImage');
-    const portraitPlaceholder = document.getElementById('portraitPlaceholder');
-    const portraitName = document.getElementById('portraitName');
-    const portraitExpr = document.getElementById('portraitExpression');
+// ======================== 帮助函数 ========================
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
-    // ======================== HELPERS ========================
-    function addLog(text) {
-      const entry = document.createElement('div');
-      entry.className = 'log-item';
-      entry.textContent = text.length > 60 ? text.slice(0, 60) + '…' : text;
-      logList.appendChild(entry);
-      logList.scrollTop = logList.scrollHeight;
+function detectCharacter(text) {
+  for (const [name] of Object.entries(PORTRAIT_CHARACTERS)) {
+    if (text.includes(name)) return name;
+  }
+  return null;
+}
+
+function detectExpression(text) {
+  for (const [keyword, exp] of Object.entries(EXPRESSION_KEYWORDS)) {
+    if (text.includes(keyword)) return exp;
+  }
+  return null;
+}
+
+function updateSprite(charName) {
+  const charId = PORTRAIT_CHARACTERS[charName];
+  if (!charId) {
+    spriteImage.classList.remove('visible');
+    currentCharName = null;
+    currentCharId = null;
+    return;
+  }
+  const imgPath = 'assets/portraits/' + charId + '/' + currentExpression + '.png';
+  spriteImage.src = imgPath;
+  spriteImage.onerror = () => {
+    spriteImage.classList.remove('visible');
+    spriteImage.src = '';
+  };
+  spriteImage.classList.add('visible');
+  currentCharName = charName;
+  currentCharId = charId;
+  textName.textContent = charName;
+  textName.classList.add('visible');
+}
+
+// ======================== 分页系统 ========================
+function splitIntoPages(text) {
+  // 按段落分割
+  const paragraphBlocks = [];
+  const lines = text.split('\n');
+
+  let currentBlock = '';
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (currentBlock) { paragraphBlocks.push(currentBlock.trim()); currentBlock = ''; }
+      continue;
+    }
+    // 选项行 → 停止收集 (支持 1. A. 【数字编号等格式）
+    if (/^[\dA-Za-z][\.\)\】\）\:]/.test(trimmed) || /^❤/.test(trimmed) || /^\[GALGAME STATE\]/.test(trimmed) || /^Scene:/.test(trimmed) || /^🏁/.test(trimmed) || /^Progress:/.test(trimmed) || /^Recent:/.test(trimmed) || /^---/.test(trimmed)) {
+      if (currentBlock) { paragraphBlocks.push(currentBlock.trim()); currentBlock = ''; }
+      continue;
+    }
+    currentBlock += trimmed + '\n';
+  }
+  if (currentBlock) paragraphBlocks.push(currentBlock.trim());
+
+  // 提取选项
+  const options = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (/^[\dA-Za-z][\.\)\】\）\:]/.test(t) && !/^---/.test(t)) options.push(t);
+  }
+
+  // 合并短段落
+  const merged = [];
+  let buffer = '';
+  for (const block of paragraphBlocks) {
+    if (!buffer) { buffer = block; continue; }
+    // 如果 buffer 很短或 block 很短，合并
+    if (buffer.length + block.length < 300 || block.length < 80) {
+      buffer += '\n\n' + block;
+    } else {
+      merged.push(buffer);
+      buffer = block;
+    }
+  }
+  if (buffer) merged.push(buffer);
+
+  return { pages: merged, options };
+}
+
+function showPage(index) {
+  const pages = currentPages;
+  if (index < 0 || index >= pages.length) {
+    // 所有页显示完 → 显示选项
+    showChoices();
+    return;
+  }
+
+  awaitingChoice = false;
+  const text = pages[index];
+
+  // 检测角色+表情
+  const charName = detectCharacter(text);
+  if (charName) {
+    const expr = detectExpression(text) || 'default';
+    currentExpression = expr;
+    updateSprite(charName);
+  }
+
+  // 渲染文本
+  textBody.innerHTML = '';
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t.startsWith('###')) {
+      const span = document.createElement('span');
+      span.className = 'scene-title';
+      span.textContent = t.replace(/^###\s*/, '');
+      textBody.appendChild(span);
+    } else if (t.startsWith('>')) {
+      const p = document.createElement('p');
+      p.textContent = t.replace(/^>\s*/, '');
+      p.style.cssText = 'color:rgba(200,180,255,.6);font-style:italic;padding-left:10px;border-left:2px solid rgba(200,180,255,.2);margin:4px 0;';
+      textBody.appendChild(p);
+    } else {
+      const p = document.createElement('p');
+      p.textContent = t;
+      textBody.appendChild(p);
+    }
+  }
+
+  // 翻页指示
+  const isLast = index >= pages.length - 1;
+  textNext.textContent = isLast ? '▼ 查看选择' : '▼ 点击继续';
+  currentPage = index;
+  choicesOverlay.classList.remove('visible');
+}
+
+function advancePage() {
+  if (awaitingChoice) return;
+  if (customInputVisible) return;
+
+  const next = currentPage + 1;
+  if (next >= currentPages.length) {
+    showChoices();
+  } else {
+    showPage(next);
+  }
+}
+
+// ======================== 选项系统 ========================
+function showChoices() {
+  awaitingChoice = true;
+  textNext.textContent = '';
+  choicesOverlay.classList.remove('visible');
+
+  // 从最后一个 AI 回复中提取选项
+  const lastMsg = messages.filter(m => m.role === 'assistant').pop();
+  if (!lastMsg) return;
+
+  const options = [];
+  const lines = lastMsg.content.split('\n');
+  for (const line of lines) {
+    const t = line.trim();
+    if (/^[\dA-Za-z][\.\)\】\）\:]/.test(t) && !/^---/.test(t)) options.push(t);
+  }
+
+  choicesOverlay.innerHTML = '';
+  if (options.length === 0) {
+    // 没有选项 → 显示"继续"和"自由输入"
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = '<span>继续推进剧情</span><span class="choice-hint">继续</span>';
+    btn.addEventListener('click', () => selectChoice('继续'));
+    choicesOverlay.appendChild(btn);
+  } else {
+    for (const opt of options) {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      const text = opt.replace(/^[\dA-Za-z][\.\)\】\）\:]\s*/, '').replace(/（.*）$/, '').trim();
+      const hint = opt.match(/（(.+)）/);
+      btn.innerHTML = '<span>' + escapeHtml(text) + '</span>' +
+        (hint ? '<span class="choice-hint">' + escapeHtml(hint[1]) + '</span>' : '');
+      btn.addEventListener('click', () => selectChoice(opt));
+      choicesOverlay.appendChild(btn);
+    }
+  }
+
+  // 自由输入入口
+  const freeBtn = document.createElement('button');
+  freeBtn.className = 'choice-btn';
+  freeBtn.innerHTML = '<span>✎ 自由输入</span><span class="choice-hint">自己输入对话或行动</span>';
+  freeBtn.addEventListener('click', () => openCustomInput());
+  choicesOverlay.appendChild(freeBtn);
+
+  choicesOverlay.classList.add('visible');
+}
+
+function selectChoice(text) {
+  choicesOverlay.classList.remove('visible');
+  sendMessage(text);
+}
+
+// ======================== 自定义输入 ========================
+function openCustomInput() {
+  // 简单的 prompt 方式
+  const input = prompt('输入你的对话或行动：');
+  if (input && input.trim()) {
+    choicesOverlay.classList.remove('visible');
+    sendMessage(input.trim());
+  } else {
+    choicesOverlay.classList.add('visible');
+  }
+}
+
+function toggleCustomInput() {
+  openCustomInput();
+}
+
+// ======================== API 调用 ========================
+async function callLLM(msgs) {
+  const response = await fetch(API_BASE_URL + '/chat/completions', {
+    method: 'POST',
+    headers: Object.assign(
+      { 'Content-Type': 'application/json' },
+      API_KEY ? { 'Authorization': 'Bearer ' + API_KEY } : {}
+    ),
+    body: JSON.stringify({
+      model: MODEL,
+      messages: msgs,
+      temperature: 0.7,
+      max_tokens: 1024
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error('API错误 ' + response.status + ': ' + (errText.length > 200 ? errText.slice(0, 200) : errText));
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('API返回为空');
+  return content;
+}
+
+// ======================== 发送消息 ========================
+async function sendMessage(userText) {
+  messages.push({ role: 'user', content: userText });
+  turnCount++;
+
+  loadingOverlay.classList.add('visible');
+
+  try {
+    const response = await callLLM(messages);
+    messages.push({ role: 'assistant', content: response });
+
+    // 分页
+    const { pages, options } = splitIntoPages(response);
+    currentPages = pages;
+
+    // 检测角色变化
+    const charName = detectCharacter(response);
+    if (charName) {
+      const expr = detectExpression(response) || 'default';
+      currentExpression = expr;
+      updateSprite(charName);
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    loadingOverlay.classList.remove('visible');
+
+    if (pages.length === 0) {
+      // 只有选项无叙事
+      showChoices();
+    } else {
+      showPage(0);
     }
+  } catch (e) {
+    loadingOverlay.classList.remove('visible');
+    errorText.textContent = '连接失败：' + e.message;
+    errorOverlay.classList.add('visible');
+  }
+}
 
-    function detectCharacter(text) {
-      for (const [name, id] of Object.entries(PORTRAIT_CHARACTERS)) {
-        if (text.includes(name)) return { id, name };
-      }
-      return null;
-    }
+function retryGame() {
+  errorOverlay.classList.remove('visible');
+  window.location.reload();
+}
 
-    function detectExpression(text) {
-      for (const [keyword, exp] of Object.entries(EXPRESSION_KEYWORDS)) {
-        if (text.includes(keyword)) return exp;
-      }
-      return null;
-    }
+// ======================== 键盘事件 ========================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    if (errorOverlay.classList.contains('visible')) return;
+    if (loadingOverlay.classList.contains('visible')) return;
+    if (choicesOverlay.classList.contains('visible')) return;
+    if (customInputVisible) return;
+    advancePage();
+  }
+});
 
-    function updatePortrait(charId, expression, charName) {
-      if (!charId || !charId.startsWith('linxue')) return; // only show linxue for now
-      const basePath = 'assets/portraits/' + charId + '/';
-      const imgPath = basePath + expression + '.png';
+// ======================== 初始化 ========================
+async function initGame() {
+  messages.length = 0;
+  turnCount = 0;
+  currentPage = -1;
+  currentPages = [];
+  currentCharName = null;
+  currentCharId = null;
+  awaitingChoice = false;
 
-      portraitImage.onload = function() {
-        portraitImage.style.display = 'block';
-        portraitPlaceholder.style.display = 'none';
-      };
-      portraitImage.onerror = function() {
-        if (expression !== 'default') {
-          portraitImage.src = basePath + 'default.png';
-          portraitImage.onerror = function() {
-            portraitImage.style.display = 'none';
-            portraitPlaceholder.style.display = 'flex';
-          };
-        } else {
-          portraitImage.style.display = 'none';
-          portraitPlaceholder.style.display = 'flex';
-        }
-      };
-      portraitImage.src = imgPath;
-      portraitName.textContent = charName || charId;
-      currentChar = charId;
-      portraitExpression = expression;
-      const exprNames = { default: '平常', smile: '微笑', happy: '开心', angry: '生气', sad: '悲伤', surprised: '惊讶', blush: '羞涩', cold: '冷漠' };
-      portraitExpr.textContent = exprNames[expression] || expression;
-    }
+  const persName = playerAttrs.personality === 'silent' ? '沉默寡言'
+    : playerAttrs.personality === 'cheerful' ? '活泼开朗'
+    : playerAttrs.personality === 'gentle' ? '温柔体贴' : '傲娇毒舌';
 
-    function renderResponse(text) {
-      const lines = text.split('\n').filter(l => l.trim());
-      const optionLines = [];
-      const narrationLines = [];
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (/^\d+[\.\】]/.test(trimmed) || /^\d+\.\s*[【「]/.test(trimmed)) {
-          optionLines.push(trimmed);
-        } else if (/^❤/.test(trimmed) || /^\[GALGAME STATE\]/.test(trimmed) || /^Scene:/.test(trimmed) || /^🏁/.test(trimmed) || /^Progress:/.test(trimmed) || /^Recent:/.test(trimmed)) {
-          // skip state lines
-        } else {
-          narrationLines.push(trimmed);
-        }
-      }
-
-      // Detect character + expression
-      const charMatch = detectCharacter(text);
-      const exprMatch = detectExpression(text);
-      if (charMatch) {
-        updatePortrait(charMatch.id, exprMatch || 'default', charMatch.name);
-      }
-
-      // Render narration
-      narrativeContent.innerHTML = '';
-      for (const line of narrationLines) {
-        if (line.startsWith('###')) {
-          const h = document.createElement('h3');
-          h.textContent = line.replace(/^###\s*/, '');
-          h.style.cssText = 'color:#fff; font-size:1.1em; margin:16px 0 8px; border-bottom:1px solid #3d3d5c; padding-bottom:4px';
-          narrativeContent.appendChild(h);
-        } else if (line.startsWith('>')) {
-          const blockquote = document.createElement('p');
-          blockquote.textContent = line.replace(/^>\s*/, '');
-          blockquote.style.cssText = 'color:#b8b8d0; font-style:italic; padding:6px 12px; border-left:3px solid #6c5ce7; margin:8px 0; background:#1a1a2e';
-          narrativeContent.appendChild(blockquote);
-        } else {
-          const p = document.createElement('p');
-          p.textContent = line;
-          narrativeContent.appendChild(p);
-        }
-      }
-      narrativeContent.scrollTop = narrativeContent.scrollHeight;
-
-      // Render choices
-      choicesList.innerHTML = '';
-      if (optionLines.length === 0) {
-        const btn = document.createElement('button');
-        btn.className = 'choice-btn';
-        btn.innerHTML = '<span class="choice-text">继续</span><span class="choice-hint">继续推进剧情</span>';
-        btn.addEventListener('click', () => sendMessage('继续'));
-        choicesList.appendChild(btn);
-      } else {
-        for (const opt of optionLines) {
-          const btn = document.createElement('button');
-          btn.className = 'choice-btn';
-          const text = opt.replace(/^\d+[\.\】]\s*/, '').replace(/（.*）$/, '').trim();
-          const hint = opt.match(/（(.+)）/);
-          btn.innerHTML = '<span class="choice-text">' + escapeHtml(text) + '</span><span class="choice-hint">' + (hint ? escapeHtml(hint[1]) : '选择') + '</span>';
-          btn.addEventListener('click', () => sendMessage(opt));
-          choicesList.appendChild(btn);
-        }
-      }
-    }
-
-    // ======================== API CALL ========================
-    async function callLLM(msgs) {
-      const response = await fetch(API_BASE_URL + '/chat/completions', {
-        method: 'POST',
-        headers: Object.assign(
-          { 'Content-Type': 'application/json' },
-          API_KEY ? { 'Authorization': 'Bearer ' + API_KEY } : {}
-        ),
-        body: JSON.stringify({
-          model: MODEL,
-          messages: msgs,
-          temperature: 0.7,
-          max_tokens: 1024
-        })
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error('API错误 ' + response.status + ': ' + (errText.length > 200 ? errText.slice(0, 200) : errText));
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new Error('API返回为空');
-      return content;
-    }
-
-    // ======================== SEND MESSAGE ========================
-    async function sendMessage(userText) {
-      messages.push({ role: 'user', content: userText });
-      addLog('你：' + (userText.length > 40 ? userText.slice(0, 40) + '…' : userText));
-
-      // Loading state
-      choicesList.innerHTML = '<div class="choice-placeholder"><span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span> 故事正在展开</div>';
-
-      turnCount++;
-      turnEl.textContent = turnCount;
-
-      try {
-        const response = await callLLM(messages);
-        messages.push({ role: 'assistant', content: response });
-        renderResponse(response);
-      } catch (e) {
-        narrativeContent.innerHTML = '<div class="error-box">[出错了] ' + escapeHtml(e.message) + '</div>' + narrativeContent.innerHTML;
-        choicesList.innerHTML = '<button class="choice-btn retry-btn" onclick="sendMessage(\'继续\')"><span class="choice-text">重试</span></button>';
-        addLog('出错：' + e.message);
-      }
-    }
-
-    // ======================== CUSTOM INPUT ========================
-    sendBtn.addEventListener('click', () => {
-      const text = customInput.value.trim();
-      if (text) {
-        customInput.value = '';
-        sendMessage(text);
-      }
-    });
-    customInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendBtn.click();
-    });
-
-    // ======================== INIT ========================
-    async function initGame() {
-      // Clear previous messages (in case of re-init)
-      messages.length = 0;
-      turnCount = 0;
-      narrativeContent.innerHTML = '<p style="color:#7b7ba8">正在加载剧本…</p>';
-
-      // Build system prompt
-      const systemPrompt = `你是 AI AVG 游戏引擎。你的角色是旁白 + 所有 NPC + 系统面板。
+  const systemPrompt = `你是 AI AVG 游戏引擎。你的角色是旁白 + 所有 NPC + 系统面板。
 
 故事设定：
 ${STORY_CONTENT}
 
-玩家角色：${playerAttrs.name}，性格：${playerAttrs.personality === 'silent' ? '沉默寡言' : playerAttrs.personality === 'cheerful' ? '活泼开朗' : playerAttrs.personality === 'gentle' ? '温柔体贴' : '傲娇毒舌'}
+玩家角色：${playerAttrs.name}，性格：${persName}
 
 角色信息：
 - 林雪 — 温柔内敛的班长，你的三年同桌
@@ -573,37 +681,39 @@ ${STORY_CONTENT}
 - 叶小满 — 神秘学妹（后期解锁）
 
 游戏规则：
-1. 每次输出包含：场景叙述（用第二人称"${playerAttrs.name}"语言）+ 2-4个预设选项
-2. 选项格式为：1.【选项文本】2.【选项文本】3.【选项文本】0.【自由行动】
-3. 用第二人称"你"叙述，称呼玩家为${playerAttrs.name}
-4. 场景标题用 ### 标记
-5. 选项可以包含倾向性提示，用（温和·观察）这样的括号标注
-6. 故事从「返校日·重逢」开始——${playerAttrs.name}在暑假回到母校，在走廊上遇到了林雪
-7. 状态卡片格式：[GALGAME STATE] Scene: 场景ID | Act: 当前幕/总幕 ❤ 角色名:好感度 🏁 flag名
-8. 重要：玩家角色设定已由前端完成（名字=${playerAttrs.name}），不要询问玩家名字或性格设定，直接开始故事
-9. 第一次输出直接生成「返校日·重逢」开场场景，不要询问任何前置问题
-10. 每次输出末尾必须包含有效的选项列表`;
+1. 每次输出包含：场景叙述（用第二人称语言）
+2. 不要询问玩家名字或性格设定，直接开始故事
+3. 故事从「返校日·重逢」开始——${playerAttrs.name}在暑假回到母校，在走廊上遇到了林雪
+4. 用第二人称"你"叙述，称呼玩家为${playerAttrs.name}
+5. 场景标题用 ### 标记
+6. **非常重要：选项必须使用数字编号格式，如：1.【选项文本】（提示）** 不要使用 A./B./C. 格式，必须用 1. 2. 3.
+7. 选项可以包含倾向性提示，用（温和·观察）这样的括号标注
+8. 小说级文学描写，注意氛围和细节`;
 
-      messages.push({ role: 'system', content: systemPrompt });
+  messages.push({ role: 'system', content: systemPrompt });
 
-      // Send starting signal
-      narrativeContent.innerHTML = '<p style="color:#7b7ba8">故事即将开始…</p>';
+  loadingOverlay.classList.add('visible');
 
-      try {
-        const firstResponse = await callLLM(messages);
-        messages.push({ role: 'assistant', content: firstResponse });
-        renderResponse(firstResponse);
-        addLog('故事开始');
-      } catch (e) {
-        narrativeContent.innerHTML = '<div class="error-box">API 连接失败: ' + escapeHtml(e.message) + '</div>' +
-          '<p style="color:#7b7ba8;margin-top:12px">请检查 API Key 和网络连接。</p>' +
-          '<button class="retry-btn" onclick="window.location.reload()">重新加载</button>';
-        choicesList.innerHTML = '';
-      }
+  try {
+    const firstResponse = await callLLM(messages);
+    messages.push({ role: 'assistant', content: firstResponse });
+
+    const { pages, options } = splitIntoPages(firstResponse);
+    currentPages = pages;
+
+    loadingOverlay.classList.remove('visible');
+
+    if (pages.length === 0) {
+      showChoices();
+    } else {
+      showPage(0);
     }
-
-    // initGame() is called only when user clicks "开始故事"
-    // (removed auto-call to prevent double initialization)
-  </script>
+  } catch (e) {
+    loadingOverlay.classList.remove('visible');
+    errorText.textContent = '连接失败：' + e.message;
+    errorOverlay.classList.add('visible');
+  }
+}
+</script>
 </body>
 </html>
