@@ -16,8 +16,28 @@
       display: flex; align-items: center; justify-content: center; flex-direction: column;
       animation: fadeIn 0.8s ease-out; color: #fff;
     }
-    #startOverlay .inner { text-align: center; max-width: 420px; padding: 20px; animation: fadeInUp 1s ease-out; }
+    #startOverlay .inner { text-align: center; max-width: 420px; padding: 20px; animation: fadeInUp 1s ease-out; position: relative; z-index: 2; }
     #startOverlay .sub { font-size: 13px; letter-spacing: 6px; color: rgba(200,190,255,.6); margin-bottom: 12px; }
+
+    /* 开始画面装饰 - 灯笼 */
+    .lantern { position: absolute; width: 24px; z-index: 1; opacity: 0.35; animation: lanternSway 3s ease-in-out infinite; }
+    .lantern::before { content: '🏮'; font-size: 24px; filter: drop-shadow(0 0 8px rgba(255,200,100,.3)); }
+    .lantern.l1 { top: 6%; left: 12%; animation-delay: 0s; }
+    .lantern.l2 { top: 8%; right: 15%; animation-delay: 0.8s; }
+    .lantern.l3 { top: 4%; left: 50%; margin-left: -12px; animation-delay: 1.6s; transform: scale(0.8); }
+    @keyframes lanternSway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+
+    /* 开始画面装饰 - 粒子 */
+    .particle { position: absolute; width: 4px; height: 4px; background: rgba(200,180,255,.3); border-radius: 50%; z-index: 1; animation: particleFloat 4s ease-in-out infinite; }
+    .particle.p1 { top: 20%; left: 25%; animation-delay: 0s; }
+    .particle.p2 { top: 35%; right: 20%; animation-delay: 1.2s; width: 3px; height: 3px; }
+    .particle.p3 { top: 50%; left: 15%; animation-delay: 2.4s; }
+    .particle.p4 { top: 60%; right: 30%; animation-delay: 0.6s; width: 5px; height: 5px; }
+    .particle.p5 { top: 75%; left: 35%; animation-delay: 3s; }
+    .particle.p6 { top: 15%; left: 60%; animation-delay: 1s; }
+    .particle.p7 { top: 45%; right: 10%; animation-delay: 2s; width: 3px; height: 3px; }
+    .particle.p8 { top: 80%; left: 55%; animation-delay: 1.8s; }
+    @keyframes particleFloat { 0%,100% { transform: translateY(0) scale(1); opacity: 0.3; } 50% { transform: translateY(-20px) scale(1.3); opacity: 0.6; } }
     #startOverlay .title {
       font-size: 44px; font-weight: 700; letter-spacing: 12px;
       background: linear-gradient(135deg,#e8d5ff,#8ec5fc,#e0c3fc);
@@ -69,10 +89,19 @@
       z-index: 1;
     }
 
-    /* 人物立绘层 */
+    /* 人物立绘层 - 响应式 */
     .character-layer {
-      position: absolute; bottom: 28%; left: 50%; transform: translateX(-50%);
+      position: absolute; left: 50%; transform: translateX(-50%);
       z-index: 2; pointer-events: none;
+      bottom: clamp(18%, 28%, 36%);
+    }
+    @media (max-height: 600px) {
+      .character-layer { bottom: 12%; }
+      #spriteImage { max-height: 45vh; }
+    }
+    @media (min-height: 900px) {
+      .character-layer { bottom: 32%; }
+      #spriteImage { max-height: 68vh; }
     }
     #spriteImage {
       max-height: 62vh; width: auto;
@@ -80,6 +109,11 @@
       filter: drop-shadow(0 0 20px rgba(0,0,0,0.4));
     }
     #spriteImage.visible { opacity: 1; }
+    /* 立绘入场动画 */
+    #spriteImage.slide-in-left { animation: spriteSlideInLeft 0.6s ease-out both; }
+    #spriteImage.slide-in-right { animation: spriteSlideInRight 0.6s ease-out both; }
+    @keyframes spriteSlideInLeft { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes spriteSlideInRight { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
 
     /* 文本框 - 底部覆盖 */
     .text-layer {
@@ -177,19 +211,79 @@
     }
     .btn-retry:hover { background: rgba(200,180,255,.25); }
 
-    /* 自定义输入 (hidden by default, shown via setting) */
-    .custom-input-area {
-      position: fixed; bottom: 80px; right: 20px; z-index: 8;
-      display: none;
+    /* ===== 自定义输入面板 ===== */
+    .custom-input-panel {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      z-index: 15; display: none;
+      background: linear-gradient(180deg, rgba(15,12,41,0.95) 0%, rgba(36,36,62,0.98) 100%);
+      border-top: 1px solid rgba(200,180,255,.15);
+      backdrop-filter: blur(12px);
+      animation: panelSlideUp 0.25s ease-out;
     }
-    #toggleCustomBtn {
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
-      border-radius: 50%; width: 36px; height: 36px;
-      color: rgba(255,255,255,.3); cursor: pointer; font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .2s;
+    .custom-input-panel.visible { display: block; }
+    @keyframes panelSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .cip-inner { max-width: 860px; margin: 0 auto; padding: 12px 20px 24px; }
+    .cip-label { font-size: 11px; color: rgba(200,180,255,.4); letter-spacing: 2px; margin-bottom: 8px; }
+    .cip-row { display: flex; gap: 8px; }
+    .cip-input {
+      flex: 1; background: rgba(255,255,255,.06); border: 1px solid rgba(200,180,255,.2);
+      border-radius: 8px; color: #fff; font-size: 14px; font-family: inherit;
+      padding: 10px 14px; outline: none; resize: none; min-height: 44px; max-height: 100px;
+      line-height: 1.6;
     }
-    #toggleCustomBtn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.6); }
+    .cip-input:focus { border-color: rgba(200,180,255,.5); }
+    .cip-send {
+      background: rgba(200,180,255,.15); border: 1px solid rgba(200,180,255,.3);
+      border-radius: 8px; color: #fff; padding: 0 20px; cursor: pointer;
+      font-size: 13px; letter-spacing: 2px; font-family: inherit;
+      white-space: nowrap; transition: all .2s;
+    }
+    .cip-send:hover { background: rgba(200,180,255,.25); }
+    .cip-cancel {
+      background: transparent; border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px; color: rgba(255,255,255,.4); padding: 0 14px; cursor: pointer;
+      font-size: 12px; font-family: inherit; transition: all .2s;
+    }
+    .cip-cancel:hover { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.2); }
+
+    /* ===== 顶部菜单 ===== */
+    #menuBtn {
+      position: fixed; top: 14px; left: 16px; z-index: 15;
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 6px; width: 36px; height: 36px;
+      color: rgba(255,255,255,.4); cursor: pointer; font-size: 18px;
+      display: none; align-items: center; justify-content: center;
+      transition: all .2s; backdrop-filter: blur(4px);
+    }
+    #menuBtn:hover { background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); }
+    #menuBtn.visible { display: flex; }
+    #menuPanel {
+      position: fixed; top: 56px; left: 16px; z-index: 15;
+      background: rgba(20,18,40,0.95); border: 1px solid rgba(200,180,255,.15);
+      border-radius: 10px; backdrop-filter: blur(12px);
+      display: none; flex-direction: column; min-width: 160px;
+      animation: menuFadeIn 0.2s ease-out;
+    }
+    #menuPanel.visible { display: flex; }
+    @keyframes menuFadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    .menu-item {
+      background: none; border: none; color: rgba(255,255,255,.7);
+      font-size: 13px; font-family: inherit; letter-spacing: 1px;
+      padding: 10px 18px; cursor: pointer; text-align: left;
+      transition: all .15s; border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item:hover { background: rgba(200,180,255,.08); color: #fff; }
+    .menu-item .menu-icon { margin-right: 8px; opacity: .5; }
+
+    /* ===== 选项入场动画 ===== */
+    @keyframes choiceSlideIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .choice-btn {
+      animation: choiceSlideIn 0.35s ease-out both;
+    }
 
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
@@ -199,10 +293,12 @@
 
 <!-- ===== 开始画面 ===== -->
 <div id="startOverlay">
-  <div class="inner">
-    <div class="sub">—— AI Visual Novel ——</div>
-    <div class="title">夏日的回音</div>
-    <div class="desc">高三毕业的夏天 · 一场没人说出口的约定</div>
+    <div class="lantern l1"></div><div class="lantern l2"></div><div class="lantern l3"></div>
+    <div class="particle p1"></div><div class="particle p2"></div><div class="particle p3"></div><div class="particle p4"></div><div class="particle p5"></div><div class="particle p6"></div><div class="particle p7"></div><div class="particle p8"></div>
+    <div class="inner">
+    <div class="sub">—— 古风奇幻 · AI Visual Novel ——</div>
+    <div class="title">月下长安</div>
+    <div class="desc">上元灯夜 · 长安满城花灯如昼<br>一块玉佩 · 六个各怀心事的人 · 一段横跨十年的旧案</div>
     <label>你的名字</label>
     <input type="text" id="playerName" value="陈远" maxlength="8">
     <label>你的性格底色</label>
@@ -259,9 +355,24 @@
     <button class="btn-retry" onclick="retryGame()">重新加载</button>
   </div>
 
-  <!-- 自定义输入按钮 -->
-  <div class="custom-input-area">
-    <button id="toggleCustomBtn" onclick="toggleCustomInput()" title="自由输入">✎</button>
+  <!-- 自定义输入面板 -->
+  <div class="custom-input-panel" id="customInputPanel">
+    <div class="cip-inner">
+      <div class="cip-label">✎ 输入你的对话或行动</div>
+      <div class="cip-row">
+        <textarea class="cip-input" id="cipText" rows="1" placeholder="说点什么…"></textarea>
+        <button class="cip-send" onclick="sendCustomInput()">发送</button>
+        <button class="cip-cancel" onclick="closeCustomInput()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 菜单按钮 + 面板 -->
+  <button id="menuBtn" onclick="toggleMenu()">☰</button>
+  <div id="menuPanel">
+    <button class="menu-item" onclick="backToTitle()"><span class="menu-icon">⊞</span>返回标题</button>
+    <button class="menu-item" onclick="restartGame()"><span class="menu-icon">↻</span>重新开始</button>
+    <button class="menu-item" onclick="showAbout()"><span class="menu-icon">i</span>关于</button>
   </div>
 </div>
 
@@ -280,6 +391,7 @@ function startGame() {
   playerAttrs.name = name;
   document.getElementById('startOverlay').style.display = 'none';
   document.getElementById('gameScreen').style.display = 'block';
+  document.getElementById('menuBtn').classList.add('visible');
   initGame();
 }
 
@@ -359,8 +471,6 @@ let currentExpression = 'default';
 let currentPage = -1;
 let currentPages = [];
 let awaitingChoice = false;
-// 临时输入框
-let customInputVisible = false;
 
 // ======================== DOM ========================
 const bgImage = document.getElementById('bgImage');
@@ -397,18 +507,24 @@ function detectExpression(text) {
 function updateSprite(charName) {
   const charId = PORTRAIT_CHARACTERS[charName];
   if (!charId) {
-    spriteImage.classList.remove('visible');
+    spriteImage.classList.remove('visible', 'slide-in-left', 'slide-in-right');
     currentCharName = null;
     currentCharId = null;
     return;
   }
   const imgPath = 'assets/portraits/' + charId + '/' + currentExpression + '.png';
+  const isNewChar = charName !== currentCharName;
   spriteImage.src = imgPath;
   spriteImage.onerror = () => {
-    spriteImage.classList.remove('visible');
+    spriteImage.classList.remove('visible', 'slide-in-left', 'slide-in-right');
     spriteImage.src = '';
   };
   spriteImage.classList.add('visible');
+  if (isNewChar) {
+    spriteImage.classList.remove('slide-in-left', 'slide-in-right');
+    void spriteImage.offsetWidth; // 强制回流重启动画
+    spriteImage.classList.add(Math.random() > 0.5 ? 'slide-in-left' : 'slide-in-right');
+  }
   currentCharName = charName;
   currentCharId = charId;
   textName.textContent = charName;
@@ -533,7 +649,7 @@ function showPage(index) {
 
 function advancePage() {
   if (awaitingChoice) return;
-  if (customInputVisible) return;
+  if (document.getElementById('customInputPanel').classList.contains('visible')) return;
 
   const next = currentPage + 1;
   if (next >= currentPages.length) {
@@ -565,13 +681,16 @@ function showChoices() {
     // 没有选项 → 显示"继续"和"自由输入"
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
+    btn.style.animationDelay = '0ms';
     btn.innerHTML = '<span>继续推进剧情</span><span class="choice-hint">继续</span>';
     btn.addEventListener('click', () => selectChoice('继续'));
     choicesOverlay.appendChild(btn);
   } else {
-    for (const opt of options) {
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
+      btn.style.animationDelay = (i * 100) + 'ms';
       const text = opt.replace(/^[\dA-Za-z][\.\)\】\）\:]\s*/, '').replace(/（.*）$/, '').trim();
       const hint = opt.match(/（(.+)）/);
       btn.innerHTML = '<span>' + escapeHtml(text) + '</span>' +
@@ -584,6 +703,7 @@ function showChoices() {
   // 自由输入入口
   const freeBtn = document.createElement('button');
   freeBtn.className = 'choice-btn';
+  freeBtn.style.animationDelay = ((options.length || 1) * 100) + 'ms';
   freeBtn.innerHTML = '<span>✎ 自由输入</span><span class="choice-hint">自己输入对话或行动</span>';
   freeBtn.addEventListener('click', () => openCustomInput());
   choicesOverlay.appendChild(freeBtn);
@@ -598,19 +718,74 @@ function selectChoice(text) {
 
 // ======================== 自定义输入 ========================
 function openCustomInput() {
-  // 简单的 prompt 方式
-  const input = prompt('输入你的对话或行动：');
-  if (input && input.trim()) {
-    choicesOverlay.classList.remove('visible');
-    sendMessage(input.trim());
-  } else {
-    choicesOverlay.classList.add('visible');
+  choicesOverlay.classList.remove('visible');
+  document.getElementById('customInputPanel').classList.add('visible');
+  document.getElementById('cipText').focus();
+}
+
+function closeCustomInput() {
+  document.getElementById('customInputPanel').classList.remove('visible');
+  if (!awaitingChoice) {
+    showChoices();
   }
 }
 
-function toggleCustomInput() {
-  openCustomInput();
+function sendCustomInput() {
+  const input = document.getElementById('cipText').value.trim();
+  if (!input) return;
+  document.getElementById('customInputPanel').classList.remove('visible');
+  document.getElementById('cipText').value = '';
+  sendMessage(input);
 }
+
+// ======================== 菜单 ========================
+function toggleMenu() {
+  document.getElementById('menuPanel').classList.toggle('visible');
+}
+
+function closeMenu() {
+  document.getElementById('menuPanel').classList.remove('visible');
+}
+
+function backToTitle() {
+  closeMenu();
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('startOverlay').style.display = 'flex';
+  document.getElementById('menuBtn').classList.remove('visible');
+}
+
+function restartGame() {
+  closeMenu();
+  if (confirm('确定重新开始？当前进度将丢失。')) {
+    location.reload();
+  }
+}
+
+function showAbout() {
+  closeMenu();
+  alert('月下长安 v0.4\nAI 视觉小说引擎\n制作: 茱莉 & 火舞\nPowered by DeepSeek + Hermes');
+}
+
+// 点击外部关闭菜单
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('menuPanel');
+  const btn = document.getElementById('menuBtn');
+  if (panel.classList.contains('visible') && !panel.contains(e.target) && !btn.contains(e.target)) {
+    closeMenu();
+  }
+});
+
+// 自定义输入框回车发送
+document.getElementById('cipText').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    sendCustomInput();
+  }
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeCustomInput();
+  }
+});
 
 // ======================== API 调用 ========================
 async function callLLM(msgs) {
@@ -690,12 +865,21 @@ function retryGame() {
 
 // ======================== 键盘事件 ========================
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const panel = document.getElementById('customInputPanel');
+    if (panel.classList.contains('visible')) {
+      closeCustomInput(); return;
+    }
+    const menu = document.getElementById('menuPanel');
+    if (menu.classList.contains('visible')) {
+      closeMenu(); return;
+    }
+  }
   if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowRight') {
     e.preventDefault();
     if (errorOverlay.classList.contains('visible')) return;
     if (loadingOverlay.classList.contains('visible')) return;
     if (choicesOverlay.classList.contains('visible')) return;
-    if (customInputVisible) return;
     advancePage();
   }
 });
