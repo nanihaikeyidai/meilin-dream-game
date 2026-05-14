@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>夏日的回音 — AI Visual Novel</title>
+  <title>月下长安 — AI Visual Novel</title>
   <style>
     /* ===== Reset & Base ===== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -220,7 +220,7 @@
 <div id="gameScreen">
   <!-- 背景 -->
   <div class="bg-layer">
-    <img id="bgImage" src="assets/backgrounds/classroom.svg" alt="背景">
+    <img id="bgImage" src="assets/backgrounds/classroom_afternoon.png" alt="背景">
     <div class="bg-overlay"></div>
   </div>
 
@@ -290,31 +290,31 @@ document.getElementById('playerName').addEventListener('keydown', e => {
 // ======================== 配置 ========================
 const API_BASE_URL = '/proxy';
 const API_KEY = '';
-const MODEL = 'deepseek-v4-flash';
+const MODEL = 'july';
 
 // ======================== 故事数据 ========================
-const STORY_CONTENT = `# 模板 A：校园青春 · 夏日的回音（活动版）
+const STORY_CONTENT = `# 模板 C：古风奇幻 · 月下长安（四幕结构）
 
 ## 类型标签
-青春 / 治愈 / 悬疑 / 纯爱 / 群像
+古风 / 权谋 / 奇情 / 群像 / 悬疑
 
 ## 一句话简介
-高三毕业的那个夏天，你回到了空无一人的母校——不是来告别的，是来赴一场没人说出口的约定。昔日同窗一个接一个回来了，每个人都带着秘密，每个人都有没说出口的话。校园里藏着一个高二那年被掩埋的真相，而这个夏天，所有的线头都会浮出水面。
+上元灯夜，长安满城花灯如昼。你在一盏孤灯下捡到半块玉佩，顺着一根红线，卷进了一场横跨十年的旧案、一座摇摇欲坠的江湖、和六个各怀心事的人。
 
 ## 世界观
-现代中国，普通小城市。时间：六月底到七月中旬，高考结束后的盛夏。
-地点：一所县城高中。暑假的校园空荡荡的，但操场上有人在打球，琴房里有人在弹琴，天台上有人躺着看云——这届毕业生们，用自己的方式留在这个夏天里。
+大唐，长安。看似繁华盛世，实则暗流涌动。
+玄天司——直属于朝廷的密探机构，掌情报、缉凶、护城之职。
+江湖势力暗中角力，三年前的「血月案」至今悬而未决，与朝堂之上的权力斗争交织在一起。
+你，一个初到长安的年轻人，因一块玉佩被卷入这场漩涡。
 
-## 核心悬念：「高二那件事」
-高二下学期，学校里发生了一起严重的事件。你被卷入其中，差点被开除。但你对此的记忆是模糊的——医生说创伤性记忆抑制，你选择性地遗忘了一些东西。
-每个人都记得。每个人都知道一部分真相。但没有人主动告诉你。
-
-## 活动推进机制
-游戏以校园活动为节奏：①返校日·重逢 → ②校园大扫除 → ③旧照片展 → ④天台夏夜会 → ⑤社团文化祭 → ⑥星空下的坦白 → ⑦夏日祭·告别`;
+## 核心悬念：「血月案」
+三年前中秋夜，长安城发生了一起震动朝野的惨案——玄天司前任司主满门遇害，唯一幸存者失踪，现场只留下半块染血的玉佩。
+那半块玉佩，如今在你手中。
+每个人都在找它。每个人都有自己的理由。但没人告诉你全部真相。`;
 
 const PORTRAIT_CHARACTERS = {
-  '林雪': 'linxue', '苏云溪': 'suyunxi', '沈清辞': 'shenqingci',
-  '夏知遥': 'xiazhiyao', '江晓渔': 'jiangxiaoyu', '程念慈': 'chengnianci', '叶小满': 'yexiaoman'
+  '谢云岚': 'xieyunlan', '花映月': 'huayingyue', '顾千帆': 'guqianfan',
+  '沈明月': 'shenmingyue', '李怀瑾': 'lihuaijin', '公孙兰': 'gongsunlan'
 };
 const EXPRESSION_KEYWORDS = {
   '微笑': 'smile', '浅笑': 'smile', '轻笑': 'smile', '温柔': 'smile',
@@ -324,6 +324,30 @@ const EXPRESSION_KEYWORDS = {
   '惊讶': 'surprised', '震惊': 'surprised', '愣': 'surprised', '怔': 'surprised', '难以置信': 'surprised',
   '脸红': 'blush', '害羞': 'blush', '羞涩': 'blush', '心动': 'blush',
   '冷漠': 'cold', '冷淡': 'cold', '面无表情': 'cold', '冰冷': 'cold', '疏离': 'cold',
+};
+
+// ======================== 场景背景映射 ========================
+const SCENE_BACKGROUNDS = {
+  'default': 'assets/backgrounds/ancient/moonlit_city.png',
+  'classroom': 'assets/backgrounds/classroom_afternoon.png',
+  'schoolyard': 'assets/backgrounds/schoolyard.png',
+  'photo_hall': 'assets/backgrounds/photo_hall.png',
+  'rooftop': 'assets/backgrounds/rooftop.png',
+  'festival': 'assets/backgrounds/festival.png',
+  'night_sky': 'assets/backgrounds/night_sky.png',
+  'summer_farewell': 'assets/backgrounds/summer_farewell.png',
+
+  // ====== 古风场景（月下长安） ======
+  'lantern_night': 'assets/backgrounds/ancient/lantern_night.png',
+  'government_hall': 'assets/backgrounds/ancient/government_hall.png',
+  'music_pavilion': 'assets/backgrounds/ancient/music_pavilion.png',
+  'changan_street': 'assets/backgrounds/ancient/changan_street.png',
+  'bookstore': 'assets/backgrounds/ancient/bookstore.png',
+  'courtyard': 'assets/backgrounds/ancient/courtyard.png',
+  'clinic': 'assets/backgrounds/ancient/clinic.png',
+  'city_wall': 'assets/backgrounds/ancient/city_wall.png',
+  'moonlit_city': 'assets/backgrounds/ancient/moonlit_city.png',
+  'lantern_river': 'assets/backgrounds/ancient/lantern_river.png',
 };
 
 // ======================== 状态 ========================
@@ -391,6 +415,20 @@ function updateSprite(charName) {
   textName.classList.add('visible');
 }
 
+// ======================== 场景切换 ========================
+function detectScene(text) {
+  const match = text.match(/\[SCENE:\s*(\w+)\]/);
+  return match ? match[1] : null;
+}
+
+function updateBg(sceneId) {
+  const bgImage = document.getElementById('bgImage');
+  const path = SCENE_BACKGROUNDS[sceneId] || SCENE_BACKGROUNDS['default'];
+  if (bgImage.src.indexOf(path) === -1) {
+    bgImage.src = path;
+  }
+}
+
 // ======================== 分页系统 ========================
 function splitIntoPages(text) {
   // 按段落分割
@@ -448,6 +486,12 @@ function showPage(index) {
 
   awaitingChoice = false;
   const text = pages[index];
+
+  // 检测场景切换 [SCENE: xxx]
+  const sceneId = detectScene(text);
+  if (sceneId) {
+    updateBg(sceneId);
+  }
 
   // 检测角色+表情
   const charName = detectCharacter(text);
@@ -618,6 +662,12 @@ async function sendMessage(userText) {
       updateSprite(charName);
     }
 
+    // 检测场景变化
+    const sceneId = detectScene(response);
+    if (sceneId) {
+      updateBg(sceneId);
+    }
+
     loadingOverlay.classList.remove('visible');
 
     if (pages.length === 0) {
@@ -672,27 +722,31 @@ ${STORY_CONTENT}
 玩家角色：${playerAttrs.name}，性格：${persName}
 
 角色信息：
-- 林雪 — 温柔内敛的班长，你的三年同桌
-- 苏云溪 — 开朗活泼的青梅竹马
-- 沈清辞 — 沉默寡言的摄影少女
-- 夏知遥 — 外冷内热的学生会副会长
-- 江晓渔 — 元气跳脱的转学生
-- 程念慈 — 实习音乐老师（后期解锁）
-- 叶小满 — 神秘学妹（后期解锁）
+- 谢云岚 — 玄天司首席密探，冷峻寡言但重情义
+- 花映月 — 不夜天乐坊的花魁，神秘优雅，消息灵通
+- 顾千帆 — 江湖游医，洒脱不羁，似乎与血月案有旧
+- 沈明月 — 将门之女，英气飒爽，在查一桩旧案
+- 李怀瑾 — 当朝御史之子，温文尔雅，暗中收集证据
+- 公孙兰 — 退休捕快，经营一家书肆，知道很多秘密（后期解锁）
 
 游戏规则：
 1. 每次输出包含：场景叙述（用第二人称语言）
 2. 不要询问玩家名字或性格设定，直接开始故事
-3. 故事从「返校日·重逢」开始——${playerAttrs.name}在暑假回到母校，在走廊上遇到了林雪
+3. 故事从「上元灯夜」开始——${playerAttrs.name}初到长安，在上元节灯会上捡到半块玉佩
 4. 用第二人称"你"叙述，称呼玩家为${playerAttrs.name}
 5. 场景标题用 ### 标记
 6. **非常重要：选项必须使用数字编号格式，如：1.【选项文本】（提示）** 不要使用 A./B./C. 格式，必须用 1. 2. 3.
 7. 选项可以包含倾向性提示，用（温和·观察）这样的括号标注
-8. 小说级文学描写，注意氛围和细节`;
+8. 小说级文学描写，注意氛围和细节，古风文风
+9. **场景切换标签：想切换场景时使用 [SCENE: 场景ID] 格式标注（支持的场景ID：lantern_night/上元灯夜, government_hall/玄天司官署, music_pavilion/不夜天乐坊, changan_street/长安街市, bookstore/书肆, courtyard/庭院残荷, clinic/医馆, city_wall/城楼, moonlit_city/月下长安, lantern_river/灯河送别）。标签只需在切换场景那一段开头标注一次即可。**`;
 
   messages.push({ role: 'system', content: systemPrompt });
 
   loadingOverlay.classList.add('visible');
+
+  // 添加开场用户消息，API 需要至少一条 user 消息
+  const openingMsg = '开始故事';
+  messages.push({ role: 'user', content: openingMsg });
 
   try {
     const firstResponse = await callLLM(messages);
