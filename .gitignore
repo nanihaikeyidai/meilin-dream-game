@@ -30,6 +30,21 @@ launcher/start.sh
 # Dependencies
 node_modules/
 
+# Secrets & credentials
+.env
+.env.*
+*.key
+*.pem
+*.secret
+config.local.*
+credentials*
+
 # Temp test files
 frontend/auto_test.html
 frontend/demo.html
+test_*.wav
+test_*.png
+test_dialogue_tts/
+
+# Generated audio cache
+frontend/assets/voices/
