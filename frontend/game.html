@@ -38,6 +38,18 @@
     .particle.p7 { top: 45%; right: 10%; animation-delay: 2s; width: 3px; height: 3px; }
     .particle.p8 { top: 80%; left: 55%; animation-delay: 1.8s; }
     @keyframes particleFloat { 0%,100% { transform: translateY(0) scale(1); opacity: 0.3; } 50% { transform: translateY(-20px) scale(1.3); opacity: 0.6; } }
+    /* 开始画面装饰 - 古风花纹 */
+    .pattern-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(180,160,255,.04) 0%, transparent 25%),
+        radial-gradient(circle at 80% 30%, rgba(180,160,255,.03) 0%, transparent 20%),
+        radial-gradient(circle at 40% 70%, rgba(180,160,255,.04) 0%, transparent 25%),
+        radial-gradient(circle at 70% 80%, rgba(180,160,255,.03) 0%, transparent 20%),
+        radial-gradient(circle at 10% 60%, rgba(180,160,255,.03) 0%, transparent 15%),
+        radial-gradient(circle at 90% 60%, rgba(180,160,255,.03) 0%, transparent 15%);
+      z-index: 1; pointer-events: none;
+    }
     #startOverlay .title {
       font-size: 44px; font-weight: 700; letter-spacing: 12px;
       background: linear-gradient(135deg,#e8d5ff,#8ec5fc,#e0c3fc);
@@ -93,11 +105,20 @@
     .character-layer {
       position: absolute; left: 50%; transform: translateX(-50%);
       z-index: 2; pointer-events: none;
-      bottom: clamp(18%, 28%, 36%);
+      bottom: 28%;
+    }
+    #spriteImage {
+      max-height: 62vh; width: auto;
+      opacity: 0; transition: opacity 0.8s ease;
+      filter: drop-shadow(0 0 20px rgba(0,0,0,0.4));
     }
     @media (max-height: 600px) {
       .character-layer { bottom: 12%; }
       #spriteImage { max-height: 45vh; }
+    }
+    @media (orientation: portrait) and (max-width: 480px) {
+      .character-layer { bottom: 42%; }
+      #spriteImage { max-height: 38vh; }
     }
     @media (min-height: 900px) {
       .character-layer { bottom: 32%; }
@@ -211,40 +232,36 @@
     }
     .btn-retry:hover { background: rgba(200,180,255,.25); }
 
-    /* ===== 自定义输入面板 ===== */
-    .custom-input-panel {
-      position: fixed; bottom: 0; left: 0; width: 100%;
-      z-index: 15; display: none;
-      background: linear-gradient(180deg, rgba(15,12,41,0.95) 0%, rgba(36,36,62,0.98) 100%);
-      border-top: 1px solid rgba(200,180,255,.15);
-      backdrop-filter: blur(12px);
-      animation: panelSlideUp 0.25s ease-out;
+    /* ===== 内嵌自定义输入区 ===== */
+    .custom-input-inline {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      animation: fadeInUp 0.25s ease-out;
     }
-    .custom-input-panel.visible { display: block; }
-    @keyframes panelSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
-    .cip-inner { max-width: 860px; margin: 0 auto; padding: 12px 20px 24px; }
-    .cip-label { font-size: 11px; color: rgba(200,180,255,.4); letter-spacing: 2px; margin-bottom: 8px; }
-    .cip-row { display: flex; gap: 8px; }
-    .cip-input {
+    .custom-input-inline.visible { display: block; }
+    .cii-row { display: flex; gap: 8px; align-items: flex-end; }
+    .cii-input {
       flex: 1; background: rgba(255,255,255,.06); border: 1px solid rgba(200,180,255,.2);
       border-radius: 8px; color: #fff; font-size: 14px; font-family: inherit;
       padding: 10px 14px; outline: none; resize: none; min-height: 44px; max-height: 100px;
       line-height: 1.6;
     }
-    .cip-input:focus { border-color: rgba(200,180,255,.5); }
-    .cip-send {
+    .cii-input:focus { border-color: rgba(200,180,255,.5); }
+    .cii-send {
       background: rgba(200,180,255,.15); border: 1px solid rgba(200,180,255,.3);
-      border-radius: 8px; color: #fff; padding: 0 20px; cursor: pointer;
+      border-radius: 8px; color: #fff; padding: 10px 20px; cursor: pointer;
       font-size: 13px; letter-spacing: 2px; font-family: inherit;
       white-space: nowrap; transition: all .2s;
     }
-    .cip-send:hover { background: rgba(200,180,255,.25); }
-    .cip-cancel {
+    .cii-send:hover { background: rgba(200,180,255,.25); }
+    .cii-cancel {
       background: transparent; border: 1px solid rgba(255,255,255,.1);
-      border-radius: 8px; color: rgba(255,255,255,.4); padding: 0 14px; cursor: pointer;
+      border-radius: 8px; color: rgba(255,255,255,.4); padding: 10px 14px; cursor: pointer;
       font-size: 12px; font-family: inherit; transition: all .2s;
     }
-    .cip-cancel:hover { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.2); }
+    .cii-cancel:hover { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.2); }
 
     /* ===== 顶部菜单 ===== */
     #menuBtn {
@@ -276,6 +293,26 @@
     .menu-item:hover { background: rgba(200,180,255,.08); color: #fff; }
     .menu-item .menu-icon { margin-right: 8px; opacity: .5; }
 
+    /* ===== 设置齿轮菜单（右上角） ===== */
+    #settingsBtn {
+      position: fixed; top: 14px; right: 16px; z-index: 15;
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 6px; width: 36px; height: 36px;
+      color: rgba(255,255,255,.4); cursor: pointer; font-size: 18px;
+      display: none; align-items: center; justify-content: center;
+      transition: all .2s; backdrop-filter: blur(4px);
+    }
+    #settingsBtn:hover { background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); }
+    #settingsBtn.visible { display: flex; }
+    #settingsPanel {
+      position: fixed; top: 56px; right: 16px; z-index: 15;
+      background: rgba(20,18,40,0.95); border: 1px solid rgba(200,180,255,.15);
+      border-radius: 10px; backdrop-filter: blur(12px);
+      display: none; flex-direction: column; min-width: 140px;
+      animation: menuFadeIn 0.2s ease-out;
+    }
+    #settingsPanel.visible { display: flex; }
+
     /* ===== 选项入场动画 ===== */
     @keyframes choiceSlideIn {
       from { opacity: 0; transform: translateY(20px) scale(0.97); }
@@ -287,6 +324,22 @@
 
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ===== TTS 状态指示器 ===== */
+    .tts-indicator {
+      position: fixed; bottom: 120px; right: 20px; z-index: 100;
+      font-size: 18px; color: rgba(200,180,255,.5);
+      opacity: 0; transition: opacity .3s; pointer-events: none;
+      display: none;
+    }
+    .tts-indicator.active {
+      opacity: 1; display: block;
+      animation: ttsPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes ttsPulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -295,6 +348,7 @@
 <div id="startOverlay">
     <div class="lantern l1"></div><div class="lantern l2"></div><div class="lantern l3"></div>
     <div class="particle p1"></div><div class="particle p2"></div><div class="particle p3"></div><div class="particle p4"></div><div class="particle p5"></div><div class="particle p6"></div><div class="particle p7"></div><div class="particle p8"></div>
+    <div class="pattern-overlay"></div>
     <div class="inner">
     <div class="sub">—— 古风奇幻 · AI Visual Novel ——</div>
     <div class="title">月下长安</div>
@@ -336,6 +390,13 @@
         <div class="text-name" id="textName"></div>
         <div class="text-body" id="textBody"><p style="color:rgba(200,180,255,.4)">故事即将开始…</p></div>
         <div class="text-next" id="textNext">▼ 点击继续</div>
+        <div class="custom-input-inline" id="customInputInline">
+          <div class="cii-row">
+            <textarea class="cii-input" id="cipText" rows="1" placeholder="说点什么…"></textarea>
+            <button class="cii-send" onclick="sendCustomInput()">发送</button>
+            <button class="cii-cancel" onclick="closeCustomInput()">取消</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -355,18 +416,6 @@
     <button class="btn-retry" onclick="retryGame()">重新加载</button>
   </div>
 
-  <!-- 自定义输入面板 -->
-  <div class="custom-input-panel" id="customInputPanel">
-    <div class="cip-inner">
-      <div class="cip-label">✎ 输入你的对话或行动</div>
-      <div class="cip-row">
-        <textarea class="cip-input" id="cipText" rows="1" placeholder="说点什么…"></textarea>
-        <button class="cip-send" onclick="sendCustomInput()">发送</button>
-        <button class="cip-cancel" onclick="closeCustomInput()">取消</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 菜单按钮 + 面板 -->
   <button id="menuBtn" onclick="toggleMenu()">☰</button>
   <div id="menuPanel">
@@ -374,6 +423,18 @@
     <button class="menu-item" onclick="restartGame()"><span class="menu-icon">↻</span>重新开始</button>
     <button class="menu-item" onclick="showAbout()"><span class="menu-icon">i</span>关于</button>
   </div>
+
+  <!-- 设置齿轮按钮 + 面板 -->
+  <button id="settingsBtn" onclick="toggleSettings()">⚙</button>
+  <div id="settingsPanel">
+    <button class="menu-item" onclick="restartGame()"><span class="menu-icon">↻</span>重新开始</button>
+    <button class="menu-item" onclick="showAbout()"><span class="menu-icon">i</span>关于</button>
+  </div>
+
+  <!-- TTS 语音播放器 -->
+  <audio id="ttsPlayer" preload="auto" style="display:none"></audio>
+  <!-- TTS 状态指示器 -->
+  <div id="ttsIndicator" class="tts-indicator">♪</div>
 </div>
 
 <script>
@@ -645,11 +706,22 @@ function showPage(index) {
   textNext.textContent = isLast ? '▼ 查看选择' : '▼ 点击继续';
   currentPage = index;
   choicesOverlay.classList.remove('visible');
+
+  // TTS：播放当前页语音
+  playVoice(turnCount, index, text);
+
+  // TTS：预加载下一页语音（如果有）
+  if (!isLast) {
+    preloadNextVoice(turnCount, index + 1, pages[index + 1]);
+  }
 }
 
 function advancePage() {
   if (awaitingChoice) return;
   if (document.getElementById('customInputPanel').classList.contains('visible')) return;
+
+  // 翻页时停止当前语音
+  stopVoice();
 
   const next = currentPage + 1;
   if (next >= currentPages.length) {
@@ -951,6 +1023,202 @@ ${STORY_CONTENT}
     errorText.textContent = '连接失败：' + e.message;
     errorOverlay.classList.add('visible');
   }
+}
+
+// ======================== TTS 语音系统 ========================
+
+const TTS_CONFIG = {
+  apiBaseUrl: 'http://localhost:7860',
+  voiceDir: 'assets/voices/',
+  enabled: true,
+  autoPlay: true,
+  pregenNext: true,
+};
+
+const ttsPlayer = document.getElementById('ttsPlayer');
+const ttsIndicator = document.getElementById('ttsIndicator');
+
+let ttsPreloaded = null;      // 预加载的 Audio 对象
+
+
+/**
+ * 获取语音文件路径
+ */
+function getVoicePath(charId, turnCount, pageIdx) {
+  return TTS_CONFIG.voiceDir + charId + '_' + turnCount + '_' + pageIdx + '.wav';
+}
+
+
+/**
+ * 从页面文本提取对话信息（前端版）
+ * 与 Python 后端 extract_dialogue() 逻辑一致
+ */
+function extractDialogueFromPage(pageText) {
+  const charMap = {
+    '谢云岚': 'xieyunlan', '花映月': 'huayingyue', '顾千帆': 'guqianfan',
+    '沈明月': 'shenmingyue', '李怀瑾': 'lihuaijin', '公孙兰': 'gongsunlan',
+  };
+
+  // Step 1: 找角色名（用 PORTRAIT_CHARACTERS 保持一致）
+  let charName = null;
+  for (const name of Object.keys(charMap)) {
+    if (pageText.includes(name)) {
+      charName = name;
+      break;
+    }
+  }
+  if (!charName) return null;
+
+  // Step 2: 找「」对话
+  const match = pageText.match(/「([^」]*)」/);
+  if (!match || !match[1].trim()) return null;
+
+  // Step 3: 提取 MOOD
+  const moodMatch = pageText.match(/\[MOOD:\s*(\w+)\]/);
+  const mood = moodMatch ? moodMatch[1].toLowerCase() : 'neutral';
+
+  return {
+    charId: charMap[charName],
+    charName: charName,
+    dialogue: match[1].trim(),
+    mood: mood,
+  };
+}
+
+
+/**
+ * 显示/隐藏 TTS 播放指示器
+ */
+function showTtsIndicator(active) {
+  if (!ttsIndicator) return;
+  ttsIndicator.classList.toggle('active', active);
+}
+
+
+/**
+ * 播放当前页的语音
+ * 在 showPage() 末尾调用
+ * 走 API 实时生成，服务器自动缓存
+ */
+function playVoice(turnCount, pageIdx, pageText) {
+  if (!TTS_CONFIG.enabled) return;
+
+  const dialogue = extractDialogueFromPage(pageText);
+  if (!dialogue) {
+    // 旁白页，停止当前语音
+    stopVoice();
+    return;
+  }
+
+  const voicePath = getVoicePath(dialogue.charId, turnCount, pageIdx);
+
+  // 检查是否有预加载的音频
+  if (ttsPreloaded && ttsPreloaded.dataset.path === voicePath) {
+    ttsPlayer.src = ttsPreloaded.src;
+    ttsPlayer.play().catch(function(e) {
+      console.warn('[TTS] preload playback failed:', e);
+      fetchTtsAndPlay(dialogue, voicePath, turnCount, pageIdx);
+    });
+    ttsPreloaded = null;
+    showTtsIndicator(true);
+    return;
+  }
+
+  // 无预加载 → 直接调 API 生成
+  fetchTtsAndPlay(dialogue, voicePath, turnCount, pageIdx);
+}
+
+
+/**
+ * 通过 API 实时生成语音并播放
+ */
+function fetchTtsAndPlay(dialogue, voicePath, turnCount, pageIdx) {
+  console.log('[TTS] Fetching from API:', dialogue.charId, dialogue.dialogue, dialogue.mood);
+  showTtsIndicator(true);
+
+  fetch(TTS_CONFIG.apiBaseUrl + '/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      charId: dialogue.charId,
+      text: dialogue.dialogue,
+      mood: dialogue.mood,
+      turnCount: turnCount,
+      pageIdx: pageIdx,
+    }),
+  })
+  .then(function(response) {
+    if (!response.ok) throw new Error('TTS API error: ' + response.status);
+    return response.blob();
+  })
+  .then(function(blob) {
+    if (blob.size < 100) throw new Error('TTS returned empty audio');
+    const url = URL.createObjectURL(blob);
+    ttsPlayer.src = url;
+    ttsPlayer.play().catch(function(e) { console.warn('[TTS] playback failed:', e); });
+  })
+  .catch(function(err) {
+    console.warn('[TTS] API fallback failed:', err);
+    // 静默降级—不阻塞游戏
+    showTtsIndicator(false);
+  });
+}
+
+
+/**
+ * 停止当前语音
+ */
+function stopVoice() {
+  try {
+    ttsPlayer.pause();
+    ttsPlayer.currentTime = 0;
+  } catch(e) { /* ignore */ }
+  showTtsIndicator(false);
+}
+
+
+/**
+ * 预加载下一页语音 — 提前调用 API 让服务器缓存
+ * 这样 advancePage → showPage → playVoice 时 API 几乎秒回
+ */
+function preloadNextVoice(turnCount, nextPageIdx, nextPageText) {
+  if (!TTS_CONFIG.enabled || !TTS_CONFIG.pregenNext) return;
+
+  const dialogue = extractDialogueFromPage(nextPageText);
+  if (!dialogue) return;
+
+  const voicePath = getVoicePath(dialogue.charId, turnCount, nextPageIdx);
+
+  // 提前调 API 生成语音（服务器会写入缓存）
+  fetch(TTS_CONFIG.apiBaseUrl + '/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      charId: dialogue.charId,
+      text: dialogue.dialogue,
+      mood: dialogue.mood,
+      turnCount: turnCount,
+      pageIdx: nextPageIdx,
+    }),
+  })
+  .then(function(response) {
+    if (!response.ok) return;
+    return response.blob();
+  })
+  .then(function(blob) {
+    if (!blob || blob.size < 100) return;
+    // 保存为预加载音频
+    var audio = new Audio();
+    audio.src = URL.createObjectURL(blob);
+    audio.dataset.path = voicePath;
+    audio.preload = 'auto';
+    audio.oncanplaythrough = function() {
+      ttsPreloaded = audio;
+    };
+  })
+  .catch(function() {
+    // 预加载失败也不阻塞 — playVoice 时会重试
+  });
 }
 </script>
 </body>
