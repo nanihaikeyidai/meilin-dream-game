@@ -3,68 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API 配置</title>
+  <title>AVG-Skill — 启动</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="app">
     <div class="card">
       <div class="card-header">
-        <h1>API 配置</h1>
-        <p class="subtitle">设置 LLM API 连接信息</p>
+        <h1>AVG-Skill</h1>
+        <p class="subtitle" id="modeHint">选择进入方式</p>
       </div>
       <div class="card-body">
-        <div class="form-group">
-          <label for="baseUrl">Base URL</label>
-          <input
-            type="text"
-            id="baseUrl"
-            placeholder="https://api.openai.com/v1"
-            autocomplete="off"
-          >
+        <div id="electronConfig" style="display:none">
+          <div class="form-group">
+            <label for="baseUrl">Base URL</label>
+            <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="apiKey">API Key</label>
+            <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="modelName">模型名称</label>
+            <input type="text" id="modelName" placeholder="deepseek-chat" autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button id="saveBtn" class="btn-primary">保存配置</button>
+            <span id="statusMsg" class="status-msg"></span>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="apiKey">API Key</label>
-          <input
-            type="password"
-            id="apiKey"
-            placeholder="sk-..."
-            autocomplete="off"
-          >
-        </div>
-        <div class="form-group">
-          <label for="modelName">模型名称</label>
-          <input
-            type="text"
-            id="modelName"
-            placeholder="deepseek-chat"
-            autocomplete="off"
-          >
-        </div>
-        <div class="form-actions">
-          <button id="saveBtn" class="btn-primary">保存配置</button>
-          <span id="statusMsg" class="status-msg"></span>
-        </div>
+        <p id="browserHint" class="subtitle" style="display:none;margin-bottom:16px">
+          浏览器模式通过本地 <code>node server.js</code> 代理 LLM，无需在此填写 API Key。
+        </p>
         <div class="form-actions form-actions-center">
-          <button id="gotoGameBtn" class="btn-primary btn-enter">进入游戏</button>
+          <button id="gotoGameBtn" class="btn-primary btn-enter">选择剧本并开始</button>
+        </div>
+        <div class="form-actions form-actions-center" style="margin-top:8px">
+          <a href="game.html?template=changan-moon" class="btn-primary btn-secondary" style="text-decoration:none;display:inline-block;padding:10px 20px">快速试玩 · 月下长安</a>
         </div>
       </div>
     </div>
   </div>
-  <script src="js/api.js"></script>
   <script>
+    const isElectron = typeof window.electronAPI !== 'undefined';
+    const modeHint = document.getElementById('modeHint');
+    const electronConfig = document.getElementById('electronConfig');
+    const browserHint = document.getElementById('browserHint');
+
+    if (isElectron) {
+      modeHint.textContent = 'Electron 模式 — 请配置 LLM API';
+      electronConfig.style.display = 'block';
+    } else {
+      modeHint.textContent = '浏览器开发模式';
+      browserHint.style.display = 'block';
+    }
+
     const baseUrlInput = document.getElementById('baseUrl');
     const apiKeyInput = document.getElementById('apiKey');
     const modelNameInput = document.getElementById('modelName');
     const saveBtn = document.getElementById('saveBtn');
     const statusMsg = document.getElementById('statusMsg');
-
-    // DeepSeek 默认配置（从 Hermes 配置抄的）
-    const DEEPSEEK_DEFAULTS = {
-      baseUrl: 'https://api.deepseek.com/v1',
-      apiKey: 'sk-8058cebe1be14578a23ee02b80ba706c66b4b',
-      model: 'deepseek-chat'
-    };
 
     function showStatus(msg, isError) {
       statusMsg.textContent = msg;
@@ -73,18 +71,12 @@
     }
 
     async function loadConfig() {
+      if (!isElectron) return;
       try {
         const config = await window.electronAPI.apiKey.load();
-        if (config && config.baseUrl) {
-          baseUrlInput.value = config.baseUrl || '';
-          apiKeyInput.value = config.apiKey || '';
-          modelNameInput.value = config.model || DEEPSEEK_DEFAULTS.model;
-        } else {
-          // 没有保存的配置，自动填入 DeepSeek 默认
-          baseUrlInput.value = DEEPSEEK_DEFAULTS.baseUrl;
-          apiKeyInput.value = DEEPSEEK_DEFAULTS.apiKey;
-          modelNameInput.value = DEEPSEEK_DEFAULTS.model;
-        }
+        baseUrlInput.value = config.baseUrl || '';
+        apiKeyInput.value = config.apiKey || '';
+        modelNameInput.value = config.model || 'deepseek-chat';
       } catch (e) {
         showStatus('加载配置失败', true);
       }
@@ -93,39 +85,32 @@
     async function saveConfig() {
       const baseUrl = baseUrlInput.value.trim();
       const apiKey = apiKeyInput.value.trim();
-      const model = modelNameInput.value.trim() || DEEPSEEK_DEFAULTS.model;
-
-      if (!baseUrl) {
-        showStatus('请输入 Base URL', true);
+      const model = modelNameInput.value.trim() || 'deepseek-chat';
+      if (!baseUrl || !apiKey) {
+        showStatus('请填写 Base URL 与 API Key', true);
         return;
       }
-      if (!apiKey) {
-        showStatus('请输入 API Key', true);
-        return;
-      }
-
       saveBtn.disabled = true;
-      saveBtn.textContent = '保存中...';
-
       try {
         const result = await window.electronAPI.apiKey.save({ baseUrl, apiKey, model });
-        if (result.success) {
-          showStatus('保存成功！');
-        } else {
-          showStatus('保存失败', true);
-        }
+        showStatus(result.success ? '保存成功' : '保存失败', !result.success);
       } catch (e) {
         showStatus('保存出错：' + e.message, true);
       } finally {
         saveBtn.disabled = false;
-        saveBtn.textContent = '保存配置';
       }
     }
 
-    saveBtn.addEventListener('click', saveConfig);
+    if (saveBtn) saveBtn.addEventListener('click', saveConfig);
+
     document.getElementById('gotoGameBtn').addEventListener('click', () => {
-      window.electronAPI.navigate.to('templates');
+      if (isElectron) {
+        window.electronAPI.navigate.to('templates');
+      } else {
+        location.href = 'templates.html';
+      }
     });
+
     loadConfig();
   </script>
 </body>

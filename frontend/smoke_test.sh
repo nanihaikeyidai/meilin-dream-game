@@ -55,8 +55,8 @@ if [ "$HTML_LEN" -gt 5000 ]; then
   echo "$HTML" | grep -q '月下长安' && CHECKS=$((CHECKS+1)) || red "  -> 缺少标题"
   echo "$HTML" | grep -q '/proxy' && CHECKS=$((CHECKS+1)) || red "  -> 缺少 proxy 路径"
   echo "$HTML" | grep -q 'showPage' && CHECKS=$((CHECKS+1)) || red "  -> 缺少 showPage()"
-  echo "$HTML" | grep -q 'PORTRAIT_CHARACTERS' && CHECKS=$((CHECKS+1)) || red "  -> 缺少 PORTRAIT_CHARACTERS"
-  echo "$HTML" | grep -q 'updateSprite' && CHECKS=$((CHECKS+1)) || red "  -> 缺少 updateSprite()"
+  echo "$HTML" | grep -q 'template-registry.js' && CHECKS=$((CHECKS+1)) || red "  -> 缺少 template-registry.js"
+  echo "$HTML" | grep -q 'bootstrap.js' && CHECKS=$((CHECKS+1)) || red "  -> 缺少 bootstrap.js"
 
   if [ "$CHECKS" -ge 8 ]; then
     green "game.html 关键内容完整 ($CHECKS/8)"
@@ -111,33 +111,32 @@ for char in "${CHARACTERS[@]}"; do
   done
 done
 echo "  立绘: $FOUND/48 存在, $MISSING/48 缺失"
-if [ "$FOUND" -ge 2 ]; then
-  green "至少默认立绘存在 ($FOUND/48)"
+if [ "$FOUND" -ge 40 ]; then
+  green "立绘资产充足 ($FOUND/48)"
+  PASS=$((PASS+1))
+elif [ "$FOUND" -ge 6 ]; then
+  green "立绘部分就绪 ($FOUND/48)，古风模板可玩"
   PASS=$((PASS+1))
 else
   red "立绘严重缺失 ($FOUND/48)"
   FAIL=$((FAIL+1))
 fi
 
-# ---- 6. API_KEY 配置检查 ----
-echo "--- 6/6 API_KEY 配置检查 ---"
+# ---- 6. 模块化脚本与模板 API ----
+echo "--- 6/6 模块脚本与 /api/templates ---"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-KEY_LINE=$(grep -n "API_KEY" "$SCRIPT_DIR/game.html" | head -1)
-if echo "$KEY_LINE" | grep -q "API_KEY = ''"; then
-  green "API_KEY 为空（代理模式正确配置）"
+MOD_OK=0
+[ -f "$SCRIPT_DIR/js/bootstrap.js" ] && MOD_OK=$((MOD_OK+1))
+[ -f "$SCRIPT_DIR/js/template-registry.js" ] && MOD_OK=$((MOD_OK+1))
+API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$BASE/api/templates" 2>&1)
+if [ "$MOD_OK" -ge 2 ] && [ "$API_STATUS" = "200" ]; then
+  green "JS 模块就绪 ($MOD_OK/2)，/api/templates HTTP 200"
   PASS=$((PASS+1))
-elif echo "$KEY_LINE" | grep -q "API_KEY="; then
-  KEY_VAL=$(echo "$KEY_LINE" | grep -oP "API_KEY\s*=\s*'([^']*)" | grep -oP "'\K[^']*")
-  if [ -n "$KEY_VAL" ] && [ "${#KEY_VAL}" -gt 10 ]; then
-    green "API_KEY 已配置 (${#KEY_VAL} chars)"
-  elif [ -z "$KEY_VAL" ]; then
-    green "API_KEY 为空字符串"
-  else
-    green "API_KEY 配置存在 (${#KEY_VAL} chars)"
-  fi
+elif [ "$MOD_OK" -ge 2 ]; then
+  green "JS 模块就绪 ($MOD_OK/2)（/api/templates: HTTP $API_STATUS）"
   PASS=$((PASS+1))
 else
-  red "未找到 API_KEY 定义"
+  red "模块脚本缺失 ($MOD_OK/2)"
   FAIL=$((FAIL+1))
 fi
 

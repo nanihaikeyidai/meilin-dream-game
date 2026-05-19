@@ -56,10 +56,28 @@
     </div>
   </div>
   <script>
+    async function fetchTemplateList() {
+      if (window.electronAPI?.templates?.list) {
+        return window.electronAPI.templates.list();
+      }
+      const res = await fetch('/api/templates');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
+    function goToCharacter(template) {
+      sessionStorage.setItem('selectedTemplate', JSON.stringify(template));
+      if (window.electronAPI?.navigate?.to) {
+        window.electronAPI.navigate.to('character');
+      } else {
+        location.href = 'character.html';
+      }
+    }
+
     async function loadTemplates() {
       const grid = document.getElementById('templatesGrid');
       try {
-        const templates = await window.electronAPI.templates.list();
+        const templates = await fetchTemplateList();
         grid.innerHTML = '';
         templates.forEach(t => {
           const card = document.createElement('div');
@@ -74,10 +92,7 @@
               <button class="btn-primary btn-select">选择此剧本</button>
             </div>
           `;
-          card.querySelector('.btn-select').addEventListener('click', () => {
-            sessionStorage.setItem('selectedTemplate', JSON.stringify(t));
-            window.electronAPI.navigate.to('character');
-          });
+          card.querySelector('.btn-select').addEventListener('click', () => goToCharacter(t));
           grid.appendChild(card);
         });
       } catch (e) {

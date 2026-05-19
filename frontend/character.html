@@ -53,7 +53,11 @@
     document.getElementById('templateName').textContent = templateData.title || '未知剧本';
 
     document.getElementById('backBtn').addEventListener('click', () => {
-      window.electronAPI.navigate.to('templates');
+      if (window.electronAPI?.navigate?.to) {
+        window.electronAPI.navigate.to('templates');
+      } else {
+        location.href = 'templates.html';
+      }
     });
 
     document.getElementById('startBtn').addEventListener('click', () => {
@@ -67,7 +71,11 @@
       const background = document.getElementById('charBackground').value.trim();
       const character = { name, gender, personality, background };
       sessionStorage.setItem('character', JSON.stringify(character));
-      window.electronAPI.navigate.to('game');
+      if (window.electronAPI?.navigate?.to) {
+        window.electronAPI.navigate.to('game');
+      } else {
+        location.href = 'game.html';
+      }
     });
   </script>
 </body>
