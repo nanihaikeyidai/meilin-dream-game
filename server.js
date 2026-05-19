@@ -110,17 +110,37 @@ function proxyRequest(targetUrl, reqBody, res, pathSuffix) {
 }
 
 function proxyLLM(reqBody, res) {
-  proxyRequest(
-    llmUrl,
-    {
-      model: reqBody.model || 'deepseek-v4-flash',
-      messages: reqBody.messages || [],
-      temperature: reqBody.temperature ?? 0.7,
-      max_tokens: reqBody.max_tokens ?? 1024,
-    },
-    res,
-    '/v1/chat/completions'
-  );
+  const payload = {
+    model: reqBody.model || 'deepseek-v4-flash',
+    messages: reqBody.messages || [],
+    temperature: reqBody.temperature ?? 0.7,
+    max_tokens: reqBody.max_tokens ?? 1024,
+  };
+  if (reqBody.stream) payload.stream = true;
+  proxyRequest(llmUrl, payload, res, '/v1/chat/completions');
+}
+
+function proxyGet(targetUrl, pathSuffix, res) {
+  const options = {
+    hostname: targetUrl.hostname,
+    port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
+    path: pathSuffix,
+    method: 'GET',
+  };
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    const headers = { 'Access-Control-Allow-Origin': '*' };
+    const ct = proxyRes.headers['content-type'];
+    if (ct) headers['Content-Type'] = ct;
+    res.writeHead(proxyRes.statusCode, headers);
+    proxyRes.pipe(res);
+  });
+
+  proxyReq.on('error', (err) => {
+    sendJson(res, 502, { error: '上游服务不可达', detail: err.message });
+  });
+
+  proxyReq.end();
 }
 
 function listTemplatesApi() {
@@ -200,8 +220,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === '/proxy/tts/status' && req.method === 'GET') {
+    proxyGet(ttsUrl, '/tts/status', res);
+    return;
+  }
+
   if (url.pathname === '/proxy/health' && req.method === 'GET') {
-    sendJson(res, 200, { status: 'ok', llm: LLM_BASE, tts: TTS_BASE });
+    sendJson(res, 200, { status: 'ok', llm: LLM_BASE, tts: TTS_BASE, stream: true });
     return;
   }
 

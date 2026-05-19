@@ -109,6 +109,7 @@
     }
     #spriteImage {
       max-height: 62vh; width: auto;
+      object-fit: contain;
       opacity: 0; transition: opacity 0.8s ease;
       filter: drop-shadow(0 0 20px rgba(0,0,0,0.4));
     }
@@ -123,11 +124,6 @@
     @media (min-height: 900px) {
       .character-layer { bottom: 32%; }
       #spriteImage { max-height: 68vh; }
-    }
-    #spriteImage {
-      max-height: 62vh; width: auto;
-      opacity: 0; transition: opacity 0.8s ease;
-      filter: drop-shadow(0 0 20px rgba(0,0,0,0.4));
     }
     #spriteImage.visible { opacity: 1; }
     /* 立绘入场动画 */
@@ -145,6 +141,14 @@
       position: relative; margin: 0 auto; max-width: 860px;
       padding: 18px 28px 28px; pointer-events: auto;
     }
+    .choices-in-window {
+      position: absolute; left: 0; right: 0; bottom: 100%;
+      margin-bottom: 6px; z-index: 6;
+      max-height: 28vh; overflow-y: auto;
+      display: none; flex-direction: column; gap: 4px;
+      pointer-events: auto;
+    }
+    .choices-in-window.visible { display: flex; }
     .text-bg {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.88) 100%);
@@ -181,18 +185,15 @@
       z-index: 3; cursor: pointer;
     }
 
-    /* 选项覆盖层 */
+    /* 选项（文本框上方，紧凑） */
     .choices-overlay {
-      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-      z-index: 10; max-width: 600px; width: 90%;
-      display: none; flex-direction: column; gap: 8px;
+      display: none;
     }
-    .choices-overlay.visible { display: flex; }
     .choice-btn {
-      background: rgba(30,30,46,0.85); border: 1px solid rgba(255,255,255,.12);
-      border-radius: 8px; color: #d4d4ea; padding: 12px 18px;
-      text-align: left; cursor: pointer; font-size: 14px;
-      font-family: inherit; line-height: 1.5; transition: all 0.2s;
+      background: rgba(30,30,46,0.92); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 6px; color: #d4d4ea; padding: 8px 12px;
+      text-align: left; cursor: pointer; font-size: 13px;
+      font-family: inherit; line-height: 1.4; transition: all 0.2s;
       backdrop-filter: blur(6px);
     }
     .choice-btn:hover { border-color: #6c5ce7; background: rgba(108,92,231,0.2); transform: translateX(4px); }
@@ -213,6 +214,21 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { font-size: 13px; color: rgba(200,180,255,.6); letter-spacing: 2px; }
+
+    /* 对话框内等待省略号 */
+    .typing-wait { color: rgba(200,180,255,.5); font-style: italic; }
+    .typing-dots span {
+      animation: typingDot 1.2s infinite;
+      opacity: 0.3;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingDot {
+      0%, 60%, 100% { opacity: 0.25; }
+      30% { opacity: 1; }
+    }
+
+    .tts-indicator[data-offline="1"] { opacity: 0.35; }
 
     /* 错误 */
     .error-overlay {
@@ -420,6 +436,7 @@
   <!-- 文本框 -->
   <div class="text-layer">
     <div class="text-window">
+      <div class="choices-in-window choices-overlay" id="choicesOverlay"></div>
       <div class="text-bg"></div>
       <div class="text-inner">
         <div class="text-name" id="textName"></div>
@@ -436,8 +453,6 @@
     </div>
   </div>
 
-  <!-- 选项覆盖 -->
-  <div class="choices-overlay" id="choicesOverlay"></div>
 
   <!-- 加载中 -->
   <div class="loading-overlay" id="loadingOverlay">
@@ -486,8 +501,10 @@
 </div>
 
 <script src="js/template-registry.js"></script>
+<script src="js/mood.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/api.js"></script>
+<script src="js/stream.js"></script>
 <script src="js/tts.js"></script>
 <script src="js/save.js"></script>
 <script src="js/bootstrap.js"></script>

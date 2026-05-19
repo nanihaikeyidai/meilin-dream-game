@@ -6,47 +6,83 @@
 
 - **路径:** `girlgame-skill/`
 - **前端入口:** `frontend/game.html`（浏览器） / Electron `index → templates → character → game`
-- **开发服务器:** `npm run dev` → `server.js`（静态资源 + LLM/TTS 代理 + 剧本 markdown）
-- **立绘目录:** `frontend/assets/portraits/`
-- **技术栈:** HTML5 + 模块化 Vanilla JS + Electron（可选）
+- **开发服务器:** `npm run dev` → `server.js`（静态资源 + LLM/TTS 代理 + 剧本 markdown + SSE 流式）
+- **立绘目录:** `frontend/assets/portraits/`（古风 6 角色 × 8 表情 = **48 PNG**）
+- **TTS:** `frontend/server_tts.py` + VoxCPM2（`VOXCPM2_PATH` 环境变量）
 
-## 架构（2026-05 重构后）
+## 架构
 
 ```
 frontend/js/
-  template-registry.js   # 各剧本：立绘映射、场景表、开场设定
-  engine.js              # 立绘回退链、场景、[EXPR]、分页
-  api.js                 # LLM：Electron 直连 / 浏览器 /proxy
-  tts.js                 # TTS：/proxy/tts
+  template-registry.js   # 各剧本：立绘映射、场景表
+  mood.js                # [MOOD] / EXPR 映射、情绪推断
+  engine.js              # 立绘 PNG 优先、场景、[EXPR]、分页
+  api.js                 # LLM 非流式（备用）
+  stream.js              # LLM SSE 流式
+  tts.js                 # /proxy/tts + /proxy/tts/status
   save.js                # localStorage 存档
-  bootstrap.js           # 游戏主循环
+  bootstrap.js           # 主循环、对话框省略号等待
 ```
 
-**模板加载：** `templates/{id}/story/main.md` 作为 system prompt 的故事设定（Electron `fs:read` / 浏览器 `/templates/...`）。
+## 立绘素材库（`frontend/assets/portraits`）
 
-## 立绘系统
+| 角色 ID | 中文名 | PNG |
+|---------|--------|:---:|
+| xieyunlan | 谢云岚 | 8/8 |
+| huayingyue | 花映月 | 8/8 |
+| guqianfan | 顾千帆 | 8/8 |
+| shenmingyue | 沈明月 | 8/8 |
+| lihuaijin | 李怀瑾 | 8/8 |
+| gongsunlan | 公孙岚 | 8/8 |
 
-**加载优先级链（已实现）：**
+**加载规则（已实现）：仅 PNG 立绘，不使用 SVG。**
 
 ```
-SVG(表情) → PNG(表情) → SVG(default) → PNG(default) → 隐藏
+PNG(当前表情) → PNG(smile) → PNG(default)
 ```
 
-**古风模板（changan-moon）** 6 角色 × 8 表情；校园等模板立绘映射已登记，资源就绪后自动显示。
+无对应 PNG 时隐藏立绘层（不显示圆形 SVG 占位）。
+
+## 情绪与立绘 / TTS
+
+| 标签 | 立绘 | TTS |
+|------|------|-----|
+| `[MOOD: warm]` | 无 EXPR 时映射为 `smile` | VoxCPM2 括号语气描述 |
+| `[EXPR: sad]` | 直接加载 `sad.png` | 不参与（语音只看 MOOD） |
+
+解析入口：`frontend/js/mood.js` → `parsePageBeat()`，由 `engine.js` / `tts.js` / `bootstrap.js` 共用。
 
 ## 标签规范
 
 | 标签 | 用途 |
 |------|------|
-| `[SCENE: id]` | 切换背景，ID 见 `template-registry.js` |
-| `[EXPR: smile]` | 强制表情（优先于关键词） |
-| `[MOOD: warm]` | TTS 语气（月下长安） |
+| `[SCENE: id]` | 切换背景 |
+| `[EXPR: smile]` | 立绘表情（优先于关键词） |
+| `[MOOD: warm]` | VoxCPM2 语气；可映射到 EXPR |
 
-## 已知问题 / TODO
+**台词格式（LLM 必须）：**
 
-- [x] ~~initGame 双重调用~~（已修复）
-- [x] ~~updateSprite 硬编码~~（已改为模板驱动）
-- [x] Electron 选模板与 game.html 断连（已打通 sessionStorage + 动态剧本）
-- [ ] 校园/都市/悬疑模板立绘资产补全
-- [ ] Electron 打包与发布流程
-- [ ] 与 `engine/save-manager.mjs`（Node 存档）统一格式
+```text
+沈明月 [MOOD: neutral] [EXPR: default]「台词内容」
+```
+
+## 交互
+
+- **流式叙事：** `/proxy/chat/completions` + `stream: true`，对话框内实时出字
+- **等待态：** 对话框「正在落笔...」，无全屏「故事正在展开」
+- **选项：** 最多 3 个预设项，位于文本框上方；自由输入独立入口
+- **TTS：** 有 `「」` 台词时播放；旁白不播
+
+## 启动
+
+```bash
+npm run dev                    # 前端 + LLM 代理
+python frontend/server_tts.py  # TTS（需 VoxCPM2）
+# 可选: set VOXCPM2_PATH=F:\...\VoxCPM2
+```
+
+## TODO
+
+- [ ] 校园/都市/悬疑模板立绘 PNG 补全
+- [ ] Electron 打包
+- [ ] 与 `engine/save-manager.mjs` 存档格式统一

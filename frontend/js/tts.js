@@ -1,5 +1,5 @@
 /**
- * TTS：经 /proxy/tts 转发，失败时静默降级
+ * TTS：经 /proxy/tts 转发，MOOD 驱动 VoxCPM2 Voice Design
  */
 (function (global) {
   function createTts(template, portraits) {
@@ -8,10 +8,36 @@
     let player = null;
     let indicator = null;
     let preloaded = null;
+    let serverReady = null;
 
     function bindDom(ttsPlayer, ttsIndicator) {
       player = ttsPlayer;
       indicator = ttsIndicator;
+    }
+
+    async function checkStatus() {
+      if (!enabled) {
+        serverReady = false;
+        return false;
+      }
+      try {
+        const r = await fetch(apiBaseUrl + '/tts/status', { method: 'GET' });
+        serverReady = r.ok;
+        if (indicator && !serverReady) {
+          indicator.title = '语音服务未连接';
+          indicator.dataset.offline = '1';
+        } else if (indicator) {
+          indicator.removeAttribute('title');
+          delete indicator.dataset.offline;
+        }
+      } catch {
+        serverReady = false;
+        if (indicator) {
+          indicator.title = '语音服务未连接';
+          indicator.dataset.offline = '1';
+        }
+      }
+      return serverReady;
     }
 
     function showIndicator(active) {
@@ -28,23 +54,22 @@
     }
 
     function extractDialogue(pageText) {
-      for (const [name, charId] of Object.entries(portraits)) {
-        if (!pageText.includes(name)) continue;
-        const match = pageText.match(/「([^」]*)」/);
-        if (!match || !match[1].trim()) return null;
-        const moodMatch = pageText.match(/\[MOOD:\s*(\w+)\]/i);
-        return {
-          charId,
-          charName: name,
-          dialogue: match[1].trim(),
-          mood: moodMatch ? moodMatch[1].toLowerCase() : 'neutral',
-        };
-      }
-      return null;
+      if (!global.AvgMood) return null;
+      const beat = global.AvgMood.parsePageBeat(pageText, portraits);
+      if (!beat || !beat.hasDialogue) return null;
+      return {
+        charId: beat.charId,
+        charName: beat.charName,
+        dialogue: beat.dialogue,
+        mood: beat.mood,
+        expression: beat.expression,
+      };
     }
 
     function fetchAndPlay(dialogue, turnCount, pageIdx) {
       if (!enabled) return;
+      if (serverReady === false) return;
+
       showIndicator(true);
 
       fetch(apiBaseUrl + '/tts', {
@@ -96,7 +121,7 @@
     }
 
     function preloadNext(turnCount, pageIdx, pageText) {
-      if (!enabled) return;
+      if (!enabled || serverReady === false) return;
       const dialogue = extractDialogue(pageText);
       if (!dialogue) return;
 
@@ -116,7 +141,8 @@
           if (!blob || blob.size < 100) return;
           const audio = new Audio();
           audio.src = URL.createObjectURL(blob);
-          audio.dataset.voiceKey = dialogue.charId + '_' + turnCount + '_' + pageIdx;
+          audio.dataset.voiceKey =
+            dialogue.charId + '_' + turnCount + '_' + pageIdx;
           audio.oncanplaythrough = () => {
             preloaded = audio;
           };
@@ -124,7 +150,7 @@
         .catch(() => {});
     }
 
-    return { bindDom, play, preloadNext, stop, enabled };
+    return { bindDom, play, preloadNext, stop, checkStatus, enabled };
   }
 
   global.AvgTts = { createTts };

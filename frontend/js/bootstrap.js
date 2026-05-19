@@ -5,6 +5,7 @@
   const { getTemplate } = window.AvgTemplates;
   const { createEngine, escapeHtml, splitIntoPages } = window.AvgEngine;
   const { callLLM } = window.AvgApi;
+  const { callLLMStream } = window.AvgStream;
   const { save: saveGame, load: loadGame } = window.AvgSave;
 
   let template = null;
@@ -19,6 +20,7 @@
   let currentPage = -1;
   let currentPages = [];
   let awaitingChoice = false;
+  let isStreaming = false;
 
   const bgImage = document.getElementById('bgImage');
   const spriteImage = document.getElementById('spriteImage');
@@ -120,10 +122,77 @@ ${template.charactersPrompt}
 2. 不要询问玩家名字或性格，直接开始故事
 3. 故事从「${template.openingBeat}」切入——${playerAttrs.name}进入剧情
 4. 场景标题用 ### 标记
-5. **选项必须用数字编号：1.【选项】（提示）**，禁止 A/B/C 格式
+5. **每次仅输出 3 个编号选项**：1.【…】2.【…】3.【…】，禁止第 4 个预设项，禁止 A/B/C 格式
 6. ${template.styleHint}
-7. 表情切换：可用 [EXPR: smile] 或文本情绪词；场景切换用 [SCENE: 场景ID]，支持：${template.sceneIdsPrompt}
-8. 角色对话使用「」引号；语气可用 [MOOD: warm/sad/angry/neutral]`;
+7. 场景切换用 [SCENE: 场景ID]，支持：${template.sceneIdsPrompt}
+8. **角色台词（必须，按剧情情绪填写）**：每一句对白单独一行
+   格式：角色名 [MOOD: 情绪] [EXPR: 表情]「对白正文」
+   - 根据当前剧情语义选择 MOOD 与 EXPR，二者应一致（例：诀别 → MOOD:sad EXPR:sad；调侃 → MOOD:warm EXPR:smile）
+   - MOOD 驱动语音语气（VoxCPM2），EXPR 驱动立绘 PNG，须随情节变化，勿整段都用 neutral
+   - MOOD 仅允许：neutral, warm, happy, sad, angry, cold, surprised, blush
+   - EXPR 仅允许：default, smile, happy, sad, angry, blush, cold, surprised
+9. 纯旁白叙述不写「」、不加 MOOD/EXPR；有「」对白则必须带标签`;
+  }
+
+  function showTypingInDialog() {
+    isStreaming = true;
+    choicesOverlay.classList.remove('visible');
+    customInputInline.classList.remove('visible');
+    textNext.textContent = '';
+    textBody.innerHTML =
+      '<p class="typing-wait">正在落笔<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></p>';
+  }
+
+  function showStreamPreview(content) {
+    const p = document.createElement('p');
+    p.style.whiteSpace = 'pre-wrap';
+    p.textContent = content;
+    textBody.innerHTML = '';
+    textBody.appendChild(p);
+  }
+
+  function finishAssistantResponse(response) {
+    isStreaming = false;
+    messages.push({ role: 'assistant', content: response });
+
+    const { pages } = splitIntoPages(response);
+    currentPages = pages;
+
+    const sceneId = engine.detectScene(response);
+    if (sceneId) engine.updateBg(bgImage, sceneId);
+    engine.applyCharacterFromText(spriteImage, textName, response);
+
+    if (pages.length === 0) showChoices();
+    else showPage(0);
+  }
+
+  async function requestLLM() {
+    showTypingInDialog();
+    try {
+      await callLLMStream(messages, {
+        onDelta: (full) => showStreamPreview(full),
+        onDone: (full) => {
+          if (!full || !full.trim()) {
+            return fallbackLLM();
+          }
+          finishAssistantResponse(full);
+        },
+        onError: () => fallbackLLM(),
+      });
+    } catch (e) {
+      await fallbackLLM(e);
+    }
+  }
+
+  async function fallbackLLM(prevErr) {
+    try {
+      const response = await callLLM(messages);
+      finishAssistantResponse(response);
+    } catch (e) {
+      isStreaming = false;
+      errorText.textContent = '连接失败：' + (prevErr?.message || e.message);
+      errorOverlay.classList.add('visible');
+    }
   }
 
   window.selectPers = function (el) {
@@ -271,7 +340,9 @@ ${template.charactersPrompt}
         textBody.appendChild(p);
       } else {
         const p = document.createElement('p');
-        p.textContent = t;
+        const display =
+          window.AvgMood?.formatPageLineForDisplay(t) ?? t;
+        p.textContent = display;
         textBody.appendChild(p);
       }
     }
@@ -287,6 +358,7 @@ ${template.charactersPrompt}
   }
 
   window.advancePage = function () {
+    if (isStreaming) return;
     if (awaitingChoice) return;
     if (customInputInline.classList.contains('visible')) return;
     tts.stop();
@@ -317,10 +389,10 @@ ${template.charactersPrompt}
       btn.addEventListener('click', () => selectChoice('继续'));
       choicesOverlay.appendChild(btn);
     } else {
-      options.forEach((opt, i) => {
+      options.slice(0, 3).forEach((opt, i) => {
         const btn = document.createElement('button');
         btn.className = 'choice-btn';
-        btn.style.animationDelay = i * 100 + 'ms';
+        btn.style.animationDelay = i * 80 + 'ms';
         const text = opt.replace(/^[\dA-Za-z][.\)】）:]\s*/, '').replace(/（.*）$/, '').trim();
         const hint = opt.match(/（(.+)）/);
         btn.innerHTML =
@@ -335,7 +407,7 @@ ${template.charactersPrompt}
 
     const freeBtn = document.createElement('button');
     freeBtn.className = 'choice-btn';
-    freeBtn.style.animationDelay = (options.length || 1) * 100 + 'ms';
+    freeBtn.style.animationDelay = (Math.min(options.length, 3) || 1) * 80 + 'ms';
     freeBtn.innerHTML =
       '<span>✎ 自由输入</span><span class="choice-hint">自己输入对话或行动</span>';
     freeBtn.addEventListener('click', () => openCustomInput());
@@ -370,27 +442,7 @@ ${template.charactersPrompt}
   async function sendMessage(userText) {
     messages.push({ role: 'user', content: userText });
     turnCount++;
-    loadingOverlay.classList.add('visible');
-
-    try {
-      const response = await callLLM(messages);
-      messages.push({ role: 'assistant', content: response });
-
-      const { pages } = splitIntoPages(response);
-      currentPages = pages;
-
-      const sceneId = engine.detectScene(response);
-      if (sceneId) engine.updateBg(bgImage, sceneId);
-      engine.applyCharacterFromText(spriteImage, textName, response);
-
-      loadingOverlay.classList.remove('visible');
-      if (pages.length === 0) showChoices();
-      else showPage(0);
-    } catch (e) {
-      loadingOverlay.classList.remove('visible');
-      errorText.textContent = '连接失败：' + e.message;
-      errorOverlay.classList.add('visible');
-    }
+    await requestLLM();
   }
 
   window.retryGame = function () {
@@ -408,21 +460,7 @@ ${template.charactersPrompt}
 
     messages.push({ role: 'system', content: buildSystemPrompt() });
     messages.push({ role: 'user', content: '开始故事' });
-
-    loadingOverlay.classList.add('visible');
-    try {
-      const firstResponse = await callLLM(messages);
-      messages.push({ role: 'assistant', content: firstResponse });
-      const { pages } = splitIntoPages(firstResponse);
-      currentPages = pages;
-      loadingOverlay.classList.remove('visible');
-      if (pages.length === 0) showChoices();
-      else showPage(0);
-    } catch (e) {
-      loadingOverlay.classList.remove('visible');
-      errorText.textContent = '连接失败：' + e.message;
-      errorOverlay.classList.add('visible');
-    }
+    await requestLLM();
   }
 
   document.getElementById('playerName')?.addEventListener('keydown', (e) => {
@@ -474,7 +512,7 @@ ${template.charactersPrompt}
     if (['Enter', ' ', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
       if (errorOverlay.classList.contains('visible')) return;
-      if (loadingOverlay.classList.contains('visible')) return;
+      if (isStreaming) return;
       if (choicesOverlay.classList.contains('visible')) return;
       if (document.getElementById('confirmOverlay')?.classList.contains('visible')) return;
       advancePage();
@@ -491,6 +529,7 @@ ${template.charactersPrompt}
         document.getElementById('ttsPlayer'),
         document.getElementById('ttsIndicator')
       );
+      tts.checkStatus();
 
       applyStartScreen(template);
       storyContent = await loadStoryMarkdown(ctx.templateId);

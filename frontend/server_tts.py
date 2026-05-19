@@ -28,14 +28,49 @@ from fastapi.responses import Response, FileResponse
 from pydantic import BaseModel
 
 # voxcpm 已作为 pip 包安装，不需要 custom_nodes 路径
-MODEL_PATH = r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2"
+MODEL_PATH = os.environ.get(
+    "VOXCPM2_PATH",
+    r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2",
+)
 
 # ── 资产路径 ───────────────────────────────────────────────
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 VOICE_DIR = ASSETS_DIR / "voices"
 VOICE_DIR.mkdir(parents=True, exist_ok=True)
 
-# ── 音色映射表：6 角色 × 7 情绪 = 42 种组合 ─────────────
+# VoxCPM2 Voice Design：括号内自然语言描述 + 正文
+# https://github.com/OpenBMB/VoxCPM — model.generate(text="(描述)对白")
+
+VALID_MOODS = frozenset({
+    "neutral", "warm", "happy", "sad", "angry", "cold", "surprised", "blush",
+})
+
+
+def normalize_mood(mood: str) -> str:
+    m = (mood or "neutral").lower()
+    aliases = {
+        "平静": "neutral",
+        "温和": "warm",
+        "温柔": "warm",
+        "开心": "happy",
+        "愉快": "happy",
+        "悲伤": "sad",
+        "难过": "sad",
+        "生气": "angry",
+        "愤怒": "angry",
+        "冷漠": "cold",
+        "冰冷": "cold",
+        "惊讶": "surprised",
+        "震惊": "surprised",
+        "害羞": "blush",
+        "脸红": "blush",
+    }
+    if m in aliases:
+        m = aliases[m]
+    return m if m in VALID_MOODS else "neutral"
+
+
+# ── 音色映射表：6 角色 × 8 情绪 ─────────────────────────
 VOICE_DESCRIPTIONS = {
     "xieyunlan": {
         "neutral": "(冷峻青年男声，沉稳低沉，语气平静)",
@@ -45,6 +80,7 @@ VOICE_DESCRIPTIONS = {
         "warm":    "(冷峻青年男声，沉稳低沉，语气难得温和，放软了声音)",
         "cold":    "(冷峻青年男声，沉稳低沉，语气冰冷疏离，不带感情)",
         "surprised": "(冷峻青年男声，沉稳低沉，语气略有波动，带着意外)",
+        "blush":   "(冷峻青年男声，沉稳低沉，语气微顿，略带不自在)",
     },
     "huayingyue": {
         "neutral": "(年轻女声，妩媚柔美，语气温柔含笑)",
@@ -54,6 +90,7 @@ VOICE_DESCRIPTIONS = {
         "warm":    "(年轻女声，妩媚柔美，语气格外温柔亲切)",
         "cold":    "(年轻女声，妩媚柔美，语气冷淡疏远，笑里藏刀)",
         "surprised": "(年轻女声，妩媚柔美，语气微微上扬，带着惊讶)",
+        "blush":   "(年轻女声，妩媚柔美，语气轻柔，带着羞涩笑意)",
     },
     "guqianfan": {
         "neutral": "(洒脱青年男声，明朗随性，语气轻松)",
@@ -63,6 +100,7 @@ VOICE_DESCRIPTIONS = {
         "warm":    "(洒脱青年男声，明朗随性，语气温柔耐心)",
         "cold":    "(洒脱青年男声，明朗随性，语气淡漠疏离)",
         "surprised": "(洒脱青年男声，明朗随性，语气上扬，带着意外)",
+        "blush":   "(洒脱青年男声，明朗随性，语气略慌，带着打趣般的害羞)",
     },
     "shenmingyue": {
         "neutral": "(英气女声，清越爽利，语气干脆)",
@@ -72,6 +110,7 @@ VOICE_DESCRIPTIONS = {
         "warm":    "(英气女声，清越爽利，语气柔和了几分)",
         "cold":    "(英气女声，清越爽利，语气冷硬如铁)",
         "surprised": "(英气女声，清越爽利，语气微顿，带着惊讶)",
+        "blush":   "(英气女声，清越爽利，语气发紧，带着少见的羞赧)",
     },
     "lihuaijin": {
         "neutral": "(温雅青年男声，如玉温润，语气和煦)",
@@ -81,6 +120,7 @@ VOICE_DESCRIPTIONS = {
         "warm":    "(温雅青年男声，如玉温润，语气格外温柔)",
         "cold":    "(温雅青年男声，如玉温润，语气冷淡疏远)",
         "surprised": "(温雅青年男声，如玉温润，语气微讶)",
+        "blush":   "(温雅青年男声，如玉温润，语气轻柔，略带局促)",
     },
     "gongsunlan": {
         "neutral": "(沉稳中年女声，平和从容，语气淡定)",
@@ -90,12 +130,14 @@ VOICE_DESCRIPTIONS = {
         "warm":    "(沉稳中年女声，平和从容，语气格外温厚)",
         "cold":    "(沉稳中年女声，平和从容，语气冷淡疏离)",
         "surprised": "(沉稳中年女声，平和从容，语气微有波澜)",
+        "blush":   "(沉稳中年女声，平和从容，语气慈和，带着温和的笑意)",
     },
 }
 
 
 def get_voice_desc(char_id: str, mood: str) -> str:
-    """获取音色描述字符串（括号格式），mood 未知时 fallback 到 neutral"""
+    """VoxCPM2 Voice Design 描述（括号前缀），mood 归一化后查表"""
+    mood = normalize_mood(mood)
     char_map = VOICE_DESCRIPTIONS.get(char_id, VOICE_DESCRIPTIONS["xieyunlan"])
     return char_map.get(mood, char_map["neutral"])
 
@@ -205,7 +247,7 @@ async def tts(req: TTSRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Empty text")
 
-    voice_desc = get_voice_desc(req.charId, req.mood)
+    voice_desc = get_voice_desc(req.charId, normalize_mood(req.mood))
     cache_path = get_cached_path(req.charId, req.turnCount, req.pageIdx)
 
     try:

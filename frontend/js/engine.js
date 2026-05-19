@@ -19,8 +19,21 @@
     }
 
     function detectExpression(text) {
+      if (global.AvgMood) {
+        const beat = global.AvgMood.parsePageBeat(text, portraits);
+        if (beat) return beat.expression;
+      }
+
       const explicit = text.match(/\[EXPR:\s*(\w+)\]/i);
-      if (explicit) return explicit[1].toLowerCase();
+      if (explicit) {
+        const e = explicit[1].toLowerCase();
+        if (global.AvgMood?.normalizeExpression(e)) return e;
+      }
+
+      if (global.AvgMood) {
+        const mood = global.AvgMood.detectMood(text);
+        if (mood) return global.AvgMood.moodToExpression(mood);
+      }
 
       for (const [keyword, exp] of Object.entries(expressionKeywords)) {
         if (text.includes(keyword)) return exp;
@@ -35,20 +48,13 @@
 
     function portraitPaths(charId, expression) {
       const base = 'assets/portraits/' + charId + '/';
-      const exts = ['svg', 'png'];
       const expressions = [expression];
+      if (expression !== 'smile') expressions.push('smile');
       if (expression !== 'default') expressions.push('default');
-
-      const paths = [];
-      for (const expr of expressions) {
-        for (const ext of exts) {
-          paths.push(base + expr + '.' + ext);
-        }
-      }
-      return paths;
+      return expressions.map((expr) => base + expr + '.png');
     }
 
-    function updateSprite(spriteImage, textNameEl, charName, expression) {
+    function updateSprite(spriteImage, textNameEl, charName, expression, moodLabel) {
       const charId = portraits[charName];
       if (!charId) {
         spriteImage.classList.remove('visible', 'slide-in-left', 'slide-in-right');
@@ -89,7 +95,9 @@
 
       currentCharName = charName;
       currentCharId = charId;
-      textNameEl.textContent = charName;
+      textNameEl.textContent = moodLabel
+        ? charName + ' · ' + moodLabel
+        : charName;
       textNameEl.classList.add('visible');
     }
 
@@ -100,6 +108,26 @@
     }
 
     function applyCharacterFromText(spriteImage, textNameEl, text) {
+      if (global.AvgMood) {
+        const beat = global.AvgMood.parsePageBeat(text, portraits);
+        if (!beat) {
+          spriteImage.classList.remove('visible', 'slide-in-left', 'slide-in-right');
+          spriteImage.src = '';
+          currentCharName = null;
+          currentCharId = null;
+          textNameEl.classList.remove('visible');
+          return null;
+        }
+        updateSprite(
+          spriteImage,
+          textNameEl,
+          beat.charName,
+          beat.expression,
+          beat.moodLabel,
+        );
+        return beat;
+      }
+
       const charName = detectCharacter(text);
       if (!charName) return null;
       const expr = detectExpression(text) || 'default';

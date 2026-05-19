@@ -111,14 +111,14 @@ for char in "${CHARACTERS[@]}"; do
   done
 done
 echo "  立绘: $FOUND/48 存在, $MISSING/48 缺失"
-if [ "$FOUND" -ge 40 ]; then
-  green "立绘资产充足 ($FOUND/48)"
+if [ "$FOUND" -ge 48 ]; then
+  green "古风立绘齐全 ($FOUND/48 PNG)"
   PASS=$((PASS+1))
-elif [ "$FOUND" -ge 6 ]; then
-  green "立绘部分就绪 ($FOUND/48)，古风模板可玩"
+elif [ "$FOUND" -ge 40 ]; then
+  green "立绘基本齐全 ($FOUND/48 PNG)"
   PASS=$((PASS+1))
 else
-  red "立绘严重缺失 ($FOUND/48)"
+  red "立绘缺失过多 ($FOUND/48 PNG)"
   FAIL=$((FAIL+1))
 fi
 

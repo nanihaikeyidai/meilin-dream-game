@@ -11,7 +11,7 @@
 AVG-Skill 是一套**纯提示词（prompt）驱动的交互式冒险游戏开发框架**，运行在任意支持skill的agent上，把工程链接丢给agent，让它安装后对话开始游戏就可以，
 支持claudeCode 或其他ide，或者龙虾，hermes  [Hermes Agent](https://hermes-agent.nousresearch.com) 。AI 自动担任旁白、角色扮演和系统引擎，你只需要通过选择题推进故事。
 
-web版本还在开发中，当前需要有通用智能体运行。
+除 **AI Skill 模式**外，仓库已提供可本地运行的 **Web / Electron 视觉小说客户端**（立绘、流式叙事、选项、TTS）。
 
 ### 核心理念
 
@@ -30,7 +30,101 @@ web版本还在开发中，当前需要有通用智能体运行。
 
 ## 🚀 快速开始
 
-### 游玩
+### 方式一：Web 客户端游玩（推荐体验立绘 / 流式 / TTS）
+
+#### 环境要求
+
+| 组件 | 说明 |
+|------|------|
+| Node.js | ≥ 18，用于 `node server.js` |
+| LLM 服务 | OpenAI 兼容接口，默认代理到 `http://localhost:8656` |
+| TTS（可选） | Python 3.10+、`voxcpm` 包、本机 VoxCPM2 模型，仅 **月下长安** 模板启用语音 |
+
+#### 1. 启动游戏服务
+
+```bash
+# 安装依赖（Electron 桌面版可选）
+npm install
+
+# 启动开发服务器（默认 http://localhost:8080）
+npm run dev
+```
+
+按需设置环境变量：
+
+```bash
+# Windows PowerShell 示例
+$env:PORT = "8080"
+$env:LLM_BASE = "http://localhost:8656"   # 你的 OpenAI 兼容 LLM 地址
+$env:TTS_BASE = "http://localhost:7860"   # TTS 服务地址（见下方）
+npm run dev
+```
+
+浏览器打开：**http://localhost:8080/**
+
+#### 2. 游戏流程
+
+```
+首页 index.html → 选择剧本 templates.html → 创建角色 character.html → 开始游戏 game.html
+```
+
+| 步骤 | 页面 | 操作 |
+|------|------|------|
+| 选剧本 | `/templates.html` | 校园 / 都市 / **月下长安** / 悬疑 等模板 |
+| 创角 | `/character.html` | 填写姓名、性格等 |
+| 游玩 | `/game.html?template=changan-moon` | 点击继续翻页，底部 **最多 3 个**选项推进剧情 |
+
+**快捷入口（已创角可直进）：**
+
+```
+http://localhost:8080/game.html?template=changan-moon
+http://localhost:8080/game.html?template=campus-summer
+```
+
+#### 3. 操作说明
+
+- **点击屏幕 /「▼ 点击继续」**：翻页阅读叙事
+- **选项**：出现在文本框上方，选 1～3 或点 **✎** 自由输入
+- **菜单**：存档 / 读档 / 返回（`game.html` 内菜单按钮）
+- **立绘**：LLM 输出 `[MOOD]` / `[EXPR]` 后自动切换 PNG 表情（月下长安 6 角色已齐）
+- **语音**：需启动 TTS；有 `「对白」` 的台词会按 `[MOOD:]` 情绪合成（旁白不播）
+
+#### 4. 启动 TTS（可选，月下长安）
+
+```bash
+# 指定 VoxCPM2 模型目录（按本机路径修改）
+# Windows
+set VOXCPM2_PATH=F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2
+python frontend/server_tts.py
+
+# 或使用脚本（Linux/macOS）
+bash frontend/start-tts.sh
+```
+
+另开终端保持 `npm run dev` 运行。健康检查：`http://localhost:8080/proxy/tts/status`
+
+情绪与语音说明见 [`docs/tts-plan.md`](docs/tts-plan.md)（基于 [OpenBMB/VoxCPM](https://github.com/OpenBMB/VoxCPM) Voice Design）。
+
+#### 5. Electron 桌面版（可选）
+
+```bash
+npm start
+```
+
+首次在启动页填写 **Base URL / API Key / 模型名**，再走「选择剧本并开始」。桌面版直连配置的 LLM；浏览器模式走本地 `/proxy`，无需在页面填 Key。
+
+#### 6. 常见问题
+
+| 现象 | 处理 |
+|------|------|
+| 一直「正在落笔」无内容 | 确认 `LLM_BASE` 可访问，且上游支持 `POST /v1/chat/completions` |
+| 无立绘 | 月下长安等模板需 `frontend/assets/portraits/{角色Id}/*.png`；无 PNG 时不显示占位图 |
+| 无语音 | 先 `python frontend/server_tts.py`，再看 `/proxy/tts/status` 是否为 200 |
+| 流式不生效 | 上游需支持 `stream: true`；失败时会自动降级为非流式整包请求 |
+
+---
+
+### 方式二：AI Skill 模式游玩
 
 ```bash
 # 加载 skill
@@ -73,8 +167,20 @@ skill_view('avg-skill')
 
 ```
 avg-skill/
+├── server.js                         # Web 开发服（静态资源 + LLM/TTS 代理）
+├── package.json                      # npm run dev / npm start
+├── frontend/
+│   ├── index.html                    # 启动页
+│   ├── templates.html                # 选剧本
+│   ├── character.html                # 创角
+│   ├── game.html                     # 游戏主界面
+│   ├── js/                           # engine / bootstrap / stream / mood / tts
+│   ├── assets/portraits/             # 立绘 PNG（月下长安 6×8）
+│   └── server_tts.py                 # VoxCPM2 TTS 服务
+├── electron/                         # 桌面客户端（可选）
 ├── SKILL.md                          # 框架核心引擎（系统提示词）
 ├── AVG.md                            # 工程说明
+├── docs/                             # 设计 / PRD / TTS / UI 方案
 ├── references/
 │   ├── save-schema.md                # 存档格式规范
 │   ├── memory-system.md              # 三级记忆架构 + 感知隔离

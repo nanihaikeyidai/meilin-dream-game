@@ -2,7 +2,65 @@
 
 > **编写目的**: 为「月下长安」AVG 游戏接入 VoxCPM2 语音合成提供完整实现方案。
 > **目标读者**: 火舞（前端实现）、茱莉（后端/Python 实现）
-> **状态**: 待实现
+> **状态**: 已实现基础（2026-05-20）；流式叙事见 `stream.js`
+
+## 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `VOXCPM2_PATH` | VoxCPM2 模型目录，默认 `F:\ComfyUI_V6.0\...\VoxCPM2` |
+| `TTS_BASE` | `server.js` 代理上游，默认 `http://localhost:7860` |
+
+**启动：**
+
+```bash
+python frontend/server_tts.py
+npm run dev
+```
+
+**健康检查：** `GET /proxy/tts/status` → 上游 `/tts/status`
+
+## VoxCPM2 开源要点（[OpenBMB/VoxCPM](https://github.com/OpenBMB/VoxCPM)）
+
+| 能力 | API 用法 | 本项目 |
+|------|----------|--------|
+| **Voice Design** | `text="(自然语言音色+情绪描述)对白正文"` | `server_tts.py` → `full_text = voice_desc + text` |
+| **Controllable Clone** | `reference_wav_path` + 括号内风格指令 | 未用（Phase 2 可做角色参考音） |
+| **情绪控制** | 描述中写明语气/情绪（如「语气压抑，带着悲伤」） | `VOICE_DESCRIPTIONS[charId][mood]` |
+| **生成** | `VoxCPM.generate(text=..., cfg_value=2.0, inference_timesteps=10)` | 与官方 Quick Start 一致 |
+
+**标准 MOOD（LLM / 前端 / TTS 三端一致）：**  
+`neutral | warm | happy | sad | angry | cold | surprised | blush`
+
+## 情绪数据流（已实现）
+
+```mermaid
+flowchart LR
+  LLM["LLM 输出\n[MOOD] [EXPR]「对白」"]
+  P["mood.js parsePageBeat"]
+  E["engine.js\nPNG 立绘"]
+  T["tts.js → /proxy/tts"]
+  V["VoxCPM2\n(描述)对白"]
+
+  LLM --> P
+  P -->|EXPR| E
+  P -->|MOOD| T
+  T --> V
+```
+
+- **立绘**：`EXPR` 优先；缺省时 `MOOD → moodToExpression()` → `assets/portraits/{id}/{expr}.png`
+- **语音**：`MOOD` → `get_voice_desc(charId, mood)` → VoxCPM2 括号描述
+- **UI**：姓名栏显示 `角色名 · 情绪中文`；正文去掉 `[MOOD]`/`[EXPR]` 标签
+
+## LLM 台词与 MOOD（AI 按剧情生成）
+
+LLM 须在台词行输出（情绪须随剧情变化）：
+
+```text
+沈明月 [MOOD: warm] [EXPR: smile]「你怎么来了？」
+```
+
+前端 `mood.js` 解析；无 `[MOOD]` 时从关键词推断；`tts.js` 将 MOOD 映射为 VoxCPM2 `voice_desc`。
 
 ---
 
