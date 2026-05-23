@@ -57,7 +57,7 @@
     function updateSprite(spriteImage, textNameEl, charName, expression, moodLabel) {
       const charId = portraits[charName];
       if (!charId) {
-        spriteImage.classList.remove('visible', 'slide-in-right');
+        spriteImage.classList.remove('visible', 'slide-in-left');
         spriteImage.src = '';
         currentCharName = null;
         currentCharId = null;
@@ -73,7 +73,7 @@
 
       function tryNext() {
         if (pathIndex >= paths.length) {
-          spriteImage.classList.remove('visible', 'slide-in-right');
+          spriteImage.classList.remove('visible', 'slide-in-left');
           spriteImage.src = '';
           return;
         }
@@ -88,9 +88,9 @@
 
       spriteImage.classList.add('visible');
       if (isNewChar) {
-        spriteImage.classList.remove('slide-in-right');
+        spriteImage.classList.remove('slide-in-left');
         void spriteImage.offsetWidth;
-        spriteImage.classList.add('slide-in-right');
+        spriteImage.classList.add('slide-in-left');
       }
 
       currentCharName = charName;
@@ -173,64 +173,154 @@
       .replace(/"/g, '&quot;');
   }
 
-  function splitIntoPages(text) {
-    const paragraphBlocks = [];
-    const lines = text.split('\n');
+  function isSkippedLine(trimmed) {
+    return (
+      /^[\dA-Za-z][.\)】）:]/.test(trimmed) ||
+      /^❤/.test(trimmed) ||
+      /^\[GALGAME STATE\]/.test(trimmed) ||
+      /^Scene:/.test(trimmed) ||
+      /^🏁/.test(trimmed) ||
+      /^Progress:/.test(trimmed) ||
+      /^Recent:/.test(trimmed) ||
+      /^---/.test(trimmed)
+    );
+  }
 
-    let currentBlock = '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        if (currentBlock) {
-          paragraphBlocks.push(currentBlock.trim());
-          currentBlock = '';
-        }
-        continue;
-      }
-      if (
-        /^[\dA-Za-z][.\)】）:]/.test(trimmed) ||
-        /^❤/.test(trimmed) ||
-        /^\[GALGAME STATE\]/.test(trimmed) ||
-        /^Scene:/.test(trimmed) ||
-        /^🏁/.test(trimmed) ||
-        /^Progress:/.test(trimmed) ||
-        /^Recent:/.test(trimmed) ||
-        /^---/.test(trimmed)
-      ) {
-        if (currentBlock) {
-          paragraphBlocks.push(currentBlock.trim());
-          currentBlock = '';
-        }
-        continue;
-      }
-      currentBlock += trimmed + '\n';
-    }
-    if (currentBlock) paragraphBlocks.push(currentBlock.trim());
-
+  function extractOptions(text) {
     const options = [];
-    for (const line of lines) {
+    for (const line of text.split('\n')) {
       const t = line.trim();
       if (/^[\dA-Za-z][.\)】）:]/.test(t) && !/^---/.test(t)) options.push(t);
     }
-
-    const merged = [];
-    let buffer = '';
-    for (const block of paragraphBlocks) {
-      if (!buffer) {
-        buffer = block;
-        continue;
-      }
-      if (buffer.length + block.length < 300 || block.length < 80) {
-        buffer += '\n\n' + block;
-      } else {
-        merged.push(buffer);
-        buffer = block;
-      }
-    }
-    if (buffer) merged.push(buffer);
-
-    return { pages: merged, options };
+    return options;
   }
 
-  global.AvgEngine = { createEngine, escapeHtml, splitIntoPages };
+  function extractNarrativeUnits(text) {
+    const units = [];
+    for (const line of text.split('\n')) {
+      const raw = line.trim();
+      if (!raw || isSkippedLine(raw)) continue;
+      if (raw.startsWith('###')) {
+        units.push({ type: 'title', raw, text: raw.replace(/^###\s*/, '') });
+      } else if (raw.startsWith('>')) {
+        units.push({ type: 'quote', raw, text: raw.replace(/^>\s*/, '') });
+      } else {
+        units.push({
+          type: 'para',
+          raw,
+          text: global.AvgMood?.formatPageLineForDisplay(raw) ?? raw,
+        });
+      }
+    }
+    return units;
+  }
+
+  function renderPageText(container, text) {
+    container.innerHTML = '';
+    for (const unit of extractNarrativeUnits(text)) {
+      if (unit.type === 'title') {
+        const span = document.createElement('span');
+        span.className = 'scene-title';
+        span.textContent = unit.text;
+        container.appendChild(span);
+      } else if (unit.type === 'quote') {
+        const p = document.createElement('p');
+        p.textContent = unit.text;
+        p.style.cssText =
+          'color:rgba(200,180,255,.6);font-style:italic;padding-left:10px;border-left:2px solid rgba(200,180,255,.2);margin:4px 0;';
+        container.appendChild(p);
+      } else {
+        const p = document.createElement('p');
+        p.textContent = unit.text;
+        container.appendChild(p);
+      }
+    }
+  }
+
+  function renderUnits(container, units) {
+    container.innerHTML = '';
+    for (const unit of units) {
+      if (unit.type === 'title') {
+        const span = document.createElement('span');
+        span.className = 'scene-title';
+        span.textContent = unit.text;
+        container.appendChild(span);
+      } else if (unit.type === 'quote') {
+        const p = document.createElement('p');
+        p.textContent = unit.text;
+        p.style.cssText =
+          'color:rgba(200,180,255,.6);font-style:italic;padding-left:10px;border-left:2px solid rgba(200,180,255,.2);margin:4px 0;';
+        container.appendChild(p);
+      } else {
+        const p = document.createElement('p');
+        p.textContent = unit.text;
+        container.appendChild(p);
+      }
+    }
+  }
+
+  function getMeasureBox(textBody) {
+    let el = document.getElementById('avgTextMeasure');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'avgTextMeasure';
+      el.className = 'text-body text-measure';
+      el.setAttribute('aria-hidden', 'true');
+      textBody.parentElement.insertBefore(el, textBody);
+    }
+    el.style.width = textBody.clientWidth + 'px';
+    return el;
+  }
+
+  function paginateUnits(units, textBodyEl) {
+    const fallbackLines = 4;
+    if (!textBodyEl || !units.length) {
+      const pages = [];
+      for (let i = 0; i < units.length; i += fallbackLines) {
+        pages.push(units.slice(i, i + fallbackLines));
+      }
+      return pages.length ? pages : [[]];
+    }
+
+    const measure = getMeasureBox(textBodyEl);
+    const maxH = textBodyEl.clientHeight;
+    if (!maxH || maxH < 8) {
+      const pages = [];
+      for (let i = 0; i < units.length; i += fallbackLines) {
+        pages.push(units.slice(i, i + fallbackLines));
+      }
+      return pages.length ? pages : [[]];
+    }
+
+    const pages = [];
+    let current = [];
+    for (const unit of units) {
+      const trial = current.concat(unit);
+      renderUnits(measure, trial);
+      if (measure.scrollHeight > maxH && current.length > 0) {
+        pages.push(current);
+        current = [unit];
+      } else {
+        current = trial;
+      }
+    }
+    if (current.length) pages.push(current);
+    return pages.length ? pages : [[]];
+  }
+
+  function unitsToPageText(units) {
+    return units.map((u) => u.raw).join('\n');
+  }
+
+  function splitIntoPages(text, textBodyEl) {
+    const units = extractNarrativeUnits(text);
+    const options = extractOptions(text);
+    if (!units.length) return { pages: [], options };
+
+    const pageGroups = paginateUnits(units, textBodyEl);
+    const pages = pageGroups.map(unitsToPageText).filter((p) => p.trim());
+    return { pages, options };
+  }
+
+  global.AvgEngine = { createEngine, escapeHtml, splitIntoPages, renderPageText };
 })(window);

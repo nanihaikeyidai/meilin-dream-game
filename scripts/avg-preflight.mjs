@@ -101,7 +101,7 @@ async function main() {
   try {
     const game = await fetchUrl(`${BASE}/game.html`);
     const html = game.body;
-    const markers = ['character-layer', 'right: 0', 'z-index: 2', 'choices-in-window', 'bootstrap.js', 'mood.js'];
+    const markers = ['character-layer', 'left: 0', 'bottom: 0', 'choices-panel', 'z-index: 2', 'bootstrap.js', 'mood.js'];
     const missing = markers.filter((m) => !html.includes(m));
     record('game.html layout markers', missing.length === 0, missing.length ? 'missing: ' + missing.join(', ') : markers.length + ' ok');
   } catch (e) {

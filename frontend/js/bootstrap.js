@@ -3,7 +3,7 @@
  */
 (function () {
   const { getTemplate } = window.AvgTemplates;
-  const { createEngine, escapeHtml, splitIntoPages } = window.AvgEngine;
+  const { createEngine, escapeHtml, splitIntoPages, renderPageText } = window.AvgEngine;
   const { callLLM } = window.AvgApi;
   const { saveApiConfig, loadApiConfig, isConfigComplete, resolveLlmSetup, testApiConfig, DEFAULT_MODEL } =
     window.AvgApiConfig;
@@ -23,6 +23,7 @@
   let currentPages = [];
   let awaitingChoice = false;
   let isStreaming = false;
+  let choiceActions = [];
 
   const bgImage = document.getElementById('bgImage');
   const spriteImage = document.getElementById('spriteImage');
@@ -34,6 +35,16 @@
   const errorOverlay = document.getElementById('errorOverlay');
   const errorText = document.getElementById('errorText');
   const customInputInline = document.getElementById('customInputInline');
+  const storyToast = document.getElementById('storyToast');
+  let storyToastTimer = null;
+
+  function showStoryToast(message) {
+    if (!storyToast) return;
+    storyToast.textContent = message;
+    storyToast.classList.add('visible');
+    clearTimeout(storyToastTimer);
+    storyToastTimer = setTimeout(() => storyToast.classList.remove('visible'), 1800);
+  }
 
   function formatConnectError(err) {
     const msg = err?.message || String(err);
@@ -193,6 +204,87 @@
     return { templateId, template: tpl, skipStart: fromFlow && !!storedChar };
   }
 
+  function formatSaveTime(iso) {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString('zh-CN', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  }
+
+  function hasPlayableSave(data) {
+    if (!data?.messages?.length) return false;
+    if (data.messages.some((m) => m.role === 'assistant')) return true;
+    return data.messages.some((m) => m.role === 'user' && m.content !== '开始故事');
+  }
+
+  function showContinuePrompt(data) {
+    const block = document.getElementById('continueBlock');
+    const meta = document.getElementById('continueMeta');
+    const newBtn = document.getElementById('newStoryBtn');
+    if (!block || !meta) return;
+
+    const name = data.playerAttrs?.name || template?.defaultPlayerName || '旅人';
+    const turn = data.turnCount || 0;
+    const when = data.savedAt ? '存档于 ' + formatSaveTime(data.savedAt) : '';
+    meta.textContent = name + ' · 已进行 ' + turn + ' 回合' + (when ? '\n' + when : '');
+    block.classList.add('visible');
+    const startBtn = document.getElementById('startStoryBtn');
+    if (startBtn) startBtn.style.display = 'none';
+    if (newBtn) newBtn.style.display = 'block';
+
+    if (data.playerAttrs?.name) {
+      const nameInput = document.getElementById('playerName');
+      if (nameInput) nameInput.value = data.playerAttrs.name;
+    }
+    if (data.playerAttrs?.personality) {
+      document.querySelectorAll('.pers-opt').forEach((el) => {
+        el.classList.toggle('selected', el.dataset.val === data.playerAttrs.personality);
+      });
+      playerAttrs.personality = data.playerAttrs.personality;
+    }
+  }
+
+  function enterGameScreen() {
+    document.getElementById('startOverlay').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
+    document.getElementById('menuBtn').classList.add('visible');
+    document.getElementById('settingsBtn').classList.add('visible');
+  }
+
+  async function applySaveData(data) {
+    Object.assign(playerAttrs, data.playerAttrs || {});
+    messages.length = 0;
+    (data.messages || []).forEach((m) => messages.push(m));
+    turnCount = data.turnCount || 0;
+    engine.setState(data.engineState);
+    if (data.bgSrc) bgImage.src = data.bgSrc;
+
+    const last = messages[messages.length - 1];
+    if (last?.role === 'user') {
+      awaitingChoice = false;
+      await requestLLM();
+      return;
+    }
+
+    const lastAssistant = messages.filter((m) => m.role === 'assistant').pop();
+    if (lastAssistant) {
+      const { pages } = splitIntoPages(lastAssistant.content, textBody);
+      currentPages = pages;
+      currentPage = typeof data.currentPage === 'number' ? data.currentPage : -1;
+      awaitingChoice = !!data.awaitingChoice;
+      if (awaitingChoice) showChoices();
+      else if (pages.length) showPage(Math.max(0, currentPage));
+      else showChoices();
+    }
+  }
+
   function applyStartScreen(tpl) {
     document.title = tpl.title + ' — AI Visual Novel';
     const sub = document.getElementById('startSub');
@@ -250,19 +342,11 @@ ${template.charactersPrompt}
       '<p class="typing-wait">正在落笔<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></p>';
   }
 
-  function showStreamPreview(content) {
-    const p = document.createElement('p');
-    p.style.whiteSpace = 'pre-wrap';
-    p.textContent = content;
-    textBody.innerHTML = '';
-    textBody.appendChild(p);
-  }
-
   function finishAssistantResponse(response) {
     isStreaming = false;
     messages.push({ role: 'assistant', content: response });
 
-    const { pages } = splitIntoPages(response);
+    const { pages } = splitIntoPages(response, textBody);
     currentPages = pages;
 
     const sceneId = engine.detectScene(response);
@@ -271,13 +355,13 @@ ${template.charactersPrompt}
 
     if (pages.length === 0) showChoices();
     else showPage(0);
+    autoSaveProgress();
   }
 
   async function requestLLM() {
     showTypingInDialog();
     try {
       await callLLMStream(messages, {
-        onDelta: (full) => showStreamPreview(full),
         onDone: (full) => {
           if (!full || !full.trim()) {
             return fallbackLLM();
@@ -310,13 +394,28 @@ ${template.charactersPrompt}
 
   window.startGame = async function () {
     if (!(await ensureApiConfig())) return;
+
+    const existing = loadGame(template.id, 'auto');
+    if (hasPlayableSave(existing)) {
+      const ok = await showConfirm('开始新故事将覆盖当前自动存档，确定吗？');
+      if (!ok) return;
+    }
+
     const name = document.getElementById('playerName').value.trim() || template.defaultPlayerName;
     playerAttrs.name = name;
-    document.getElementById('startOverlay').style.display = 'none';
-    document.getElementById('gameScreen').style.display = 'block';
-    document.getElementById('menuBtn').classList.add('visible');
-    document.getElementById('settingsBtn').classList.add('visible');
+    enterGameScreen();
     initGame();
+  };
+
+  window.continueSavedGame = async function () {
+    if (!(await ensureApiConfig())) return;
+    const data = loadGame(template.id, 'auto');
+    if (!hasPlayableSave(data)) {
+      showStoryToast('没有找到可继续的存档');
+      return;
+    }
+    enterGameScreen();
+    await applySaveData(data);
   };
 
   window.toggleMenu = function () {
@@ -377,44 +476,36 @@ ${template.charactersPrompt}
 
   window.saveProgress = function () {
     closeMenu();
-    const payload = {
+    autoSaveProgress();
+    showConfirm('进度已保存。').then(() => {});
+  };
+
+  function autoSaveProgress() {
+    if (!template?.id || !engine) return;
+    saveGame(template.id, 'auto', {
       templateId: template.id,
-      playerAttrs,
-      messages,
+      playerAttrs: { ...playerAttrs },
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
       turnCount,
       engineState: engine.getState(),
       bgSrc: bgImage.src,
-    };
-    AvgSave.save(template.id, 'auto', payload);
-    showConfirm('进度已保存。').then(() => {});
-  };
+      currentPage,
+      awaitingChoice,
+    });
+  }
 
   window.loadProgress = async function () {
     closeMenu();
     const data = loadGame(template.id, 'auto');
-    if (!data) {
+    if (!hasPlayableSave(data)) {
       await showConfirm('没有找到存档。');
       return;
     }
     const ok = await showConfirm('加载存档将覆盖当前进度，继续？');
     if (!ok) return;
 
-    Object.assign(playerAttrs, data.playerAttrs || {});
-    messages.length = 0;
-    (data.messages || []).forEach((m) => messages.push(m));
-    turnCount = data.turnCount || 0;
-    engine.setState(data.engineState);
-    if (data.bgSrc) bgImage.src = data.bgSrc;
-
-    const last = messages.filter((m) => m.role === 'assistant').pop();
-    if (last) {
-      const { pages } = splitIntoPages(last.content);
-      currentPages = pages;
-      currentPage = -1;
-      awaitingChoice = false;
-      if (pages.length) showPage(0);
-      else showChoices();
-    }
+    enterGameScreen();
+    await applySaveData(data);
   };
 
   function showPage(index) {
@@ -432,32 +523,11 @@ ${template.charactersPrompt}
 
     engine.applyCharacterFromText(spriteImage, textName, text);
 
-    textBody.innerHTML = '';
-    for (const line of text.split('\n')) {
-      const t = line.trim();
-      if (!t) continue;
-      if (t.startsWith('###')) {
-        const span = document.createElement('span');
-        span.className = 'scene-title';
-        span.textContent = t.replace(/^###\s*/, '');
-        textBody.appendChild(span);
-      } else if (t.startsWith('>')) {
-        const p = document.createElement('p');
-        p.textContent = t.replace(/^>\s*/, '');
-        p.style.cssText =
-          'color:rgba(200,180,255,.6);font-style:italic;padding-left:10px;border-left:2px solid rgba(200,180,255,.2);margin:4px 0;';
-        textBody.appendChild(p);
-      } else {
-        const p = document.createElement('p');
-        const display =
-          window.AvgMood?.formatPageLineForDisplay(t) ?? t;
-        p.textContent = display;
-        textBody.appendChild(p);
-      }
-    }
+    renderPageText(textBody, text);
 
     const isLast = index >= pages.length - 1;
-    textNext.textContent = isLast ? '▼ 查看选择' : '▼ 点击继续';
+    const hasMorePages = pages.length > 1 && !isLast;
+    textNext.textContent = isLast ? '▼ 查看选择' : hasMorePages ? '▼ 点击继续（还有下文）' : '▼ 点击继续';
     currentPage = index;
     choicesOverlay.classList.remove('visible');
     customInputInline.classList.remove('visible');
@@ -467,7 +537,10 @@ ${template.charactersPrompt}
   }
 
   window.advancePage = function () {
-    if (isStreaming) return;
+    if (isStreaming) {
+      showStoryToast('正在加载剧情');
+      return;
+    }
     if (awaitingChoice) return;
     if (customInputInline.classList.contains('visible')) return;
     tts.stop();
@@ -476,8 +549,22 @@ ${template.charactersPrompt}
     else showPage(next);
   };
 
+  function buildChoiceButton(labelHtml, index, onSelect, extraClass) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'choice-btn' + (extraClass ? ' ' + extraClass : '');
+    btn.style.animationDelay = index * 90 + 'ms';
+    btn.innerHTML = labelHtml;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onSelect();
+    });
+    return btn;
+  }
+
   function showChoices() {
     awaitingChoice = true;
+    choiceActions = [];
     textNext.textContent = '';
     choicesOverlay.classList.remove('visible');
 
@@ -492,44 +579,56 @@ ${template.charactersPrompt}
 
     choicesOverlay.innerHTML = '';
     if (options.length === 0) {
-      const btn = document.createElement('button');
-      btn.className = 'choice-btn';
-      btn.innerHTML = '<span>继续推进剧情</span><span class="choice-hint">继续</span>';
-      btn.addEventListener('click', () => selectChoice('继续'));
-      choicesOverlay.appendChild(btn);
+      const optText = '继续';
+      choiceActions.push(() => selectChoice(optText));
+      choicesOverlay.appendChild(
+        buildChoiceButton(
+          '<span class="choice-label"><span class="choice-num">1.</span>继续推进剧情</span><span class="choice-hint">继续</span>',
+          0,
+          () => selectChoice(optText)
+        )
+      );
     } else {
       options.slice(0, 3).forEach((opt, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'choice-btn';
-        btn.style.animationDelay = i * 80 + 'ms';
-        const text = opt.replace(/^[\dA-Za-z][.\)】）:]\s*/, '').replace(/（.*）$/, '').trim();
+        const display = opt.replace(/^[\dA-Za-z][.\)】）:]\s*/, '').trim();
         const hint = opt.match(/（(.+)）/);
-        btn.innerHTML =
-          '<span>' +
-          escapeHtml(text) +
-          '</span>' +
-          (hint ? '<span class="choice-hint">' + escapeHtml(hint[1]) + '</span>' : '');
-        btn.addEventListener('click', () => selectChoice(opt));
-        choicesOverlay.appendChild(btn);
+        choiceActions.push(() => selectChoice(opt));
+        choicesOverlay.appendChild(
+          buildChoiceButton(
+            '<span class="choice-label"><span class="choice-num">' +
+              (i + 1) +
+              '.</span>' +
+              escapeHtml(display) +
+              '</span>' +
+              (hint ? '<span class="choice-hint">' + escapeHtml(hint[1]) + '</span>' : ''),
+            i,
+            () => selectChoice(opt)
+          )
+        );
       });
     }
 
-    const freeBtn = document.createElement('button');
-    freeBtn.className = 'choice-btn';
-    freeBtn.style.animationDelay = (Math.min(options.length, 3) || 1) * 80 + 'ms';
-    freeBtn.innerHTML =
-      '<span>✎ 自由输入</span><span class="choice-hint">自己输入对话或行动</span>';
-    freeBtn.addEventListener('click', () => openCustomInput());
-    choicesOverlay.appendChild(freeBtn);
+    const freeIdx = Math.min(options.length, 3) || 1;
+    choicesOverlay.appendChild(
+      buildChoiceButton(
+        '<span class="choice-label">✎ 自由输入</span><span class="choice-hint">自己输入对话或行动</span>',
+        freeIdx,
+        () => openCustomInput(),
+        'choice-btn-free'
+      )
+    );
     choicesOverlay.classList.add('visible');
   }
 
   window.selectChoice = function (text) {
+    choiceActions = [];
     choicesOverlay.classList.remove('visible');
+    awaitingChoice = false;
     sendMessage(text);
   };
 
   window.openCustomInput = function () {
+    choiceActions = [];
     choicesOverlay.classList.remove('visible');
     customInputInline.classList.add('visible');
     document.getElementById('cipText').focus();
@@ -551,6 +650,7 @@ ${template.charactersPrompt}
   async function sendMessage(userText) {
     messages.push({ role: 'user', content: userText });
     turnCount++;
+    autoSaveProgress();
     await requestLLM();
   }
 
@@ -587,6 +687,13 @@ ${template.charactersPrompt}
     }
   });
 
+  document.querySelector('.text-window')?.addEventListener('click', (e) => {
+    if (e.target.closest('.choices-panel')) return;
+    if (e.target.closest('.custom-input-inline')) return;
+    if (e.target.closest('button, textarea, input, a')) return;
+    advancePage();
+  });
+
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('menuPanel');
     const btn = document.getElementById('menuBtn');
@@ -620,10 +727,17 @@ ${template.charactersPrompt}
       const apiCfg = document.getElementById('apiConfigOverlay');
       if (apiCfg?.classList.contains('visible')) return;
     }
+    if (choicesOverlay.classList.contains('visible') && awaitingChoice) {
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 3 && choiceActions[num - 1]) {
+        e.preventDefault();
+        choiceActions[num - 1]();
+        return;
+      }
+    }
     if (['Enter', ' ', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
       if (errorOverlay.classList.contains('visible')) return;
-      if (isStreaming) return;
       if (choicesOverlay.classList.contains('visible')) return;
       if (document.getElementById('confirmOverlay')?.classList.contains('visible')) return;
       advancePage();
@@ -646,7 +760,12 @@ ${template.charactersPrompt}
       storyContent = await loadStoryMarkdown(ctx.templateId);
       document.getElementById('settingsBtn')?.classList.add('visible');
 
-      if (ctx.skipStart) {
+      const saved = loadGame(ctx.templateId, 'auto');
+      if (hasPlayableSave(saved)) {
+        showContinuePrompt(saved);
+      }
+
+      if (ctx.skipStart && !hasPlayableSave(saved)) {
         document.getElementById('startOverlay').style.display = 'none';
         document.getElementById('gameScreen').style.display = 'block';
         document.getElementById('menuBtn').classList.add('visible');

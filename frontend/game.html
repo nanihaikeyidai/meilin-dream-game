@@ -79,6 +79,41 @@
       font-family: inherit; transition: all .3s;
     }
     .btn-start:hover { background: rgba(200,180,255,.25); }
+    .btn-start.btn-continue {
+      background: rgba(108, 92, 231, 0.35);
+      border-color: rgba(200, 180, 255, 0.55);
+      margin-bottom: 10px;
+    }
+    .btn-start.btn-continue:hover { background: rgba(108, 92, 231, 0.5); }
+    .btn-start.btn-secondary-start {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+      font-size: 13px;
+      letter-spacing: 3px;
+      padding: 10px 0;
+    }
+    #continueBlock {
+      display: none;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(200, 180, 255, 0.35);
+      background: rgba(108, 92, 231, 0.12);
+      text-align: left;
+    }
+    #continueBlock.visible { display: block; }
+    .continue-title {
+      font-size: 13px;
+      color: #c8b4ff;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+    .continue-meta {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.55);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
 
     /* ===== 游戏主界面 ===== */
     #gameScreen {
@@ -101,58 +136,51 @@
       z-index: 1;
     }
 
-    /* 人物立绘层：背景之上、对话框之下，靠右半身 */
+    /* 人物立绘层：左下角，底边贴屏幕底部 */
     .character-layer {
       position: absolute;
-      top: 0;
-      right: 0;
+      left: 0;
       bottom: 0;
-      left: auto;
       width: min(44vw, 460px);
       max-width: 52%;
       z-index: 2;
       pointer-events: none;
       display: flex;
       align-items: flex-end;
-      justify-content: flex-end;
-      padding: 0 clamp(6px, 1.5vw, 20px) clamp(168px, 24vh, 240px) 0;
+      justify-content: flex-start;
+      padding: 0 0 0 clamp(6px, 1.5vw, 16px);
     }
     #spriteImage {
       display: block;
       max-width: 100%;
-      max-height: min(70vh, calc(100vh - clamp(150px, 22vh, 240px)));
+      max-height: min(92vh, calc(100vh - 48px));
       width: auto;
       height: auto;
       object-fit: contain;
-      object-position: bottom right;
+      object-position: bottom left;
       opacity: 0;
       transition: opacity 0.8s ease;
       filter: drop-shadow(0 4px 24px rgba(0,0,0,0.45));
     }
     @media (max-height: 600px) {
-      .character-layer {
-        width: min(40vw, 320px);
-        padding-bottom: clamp(120px, 18vh, 160px);
-      }
-      #spriteImage { max-height: min(58vh, calc(100vh - 160px)); }
+      .character-layer { width: min(40vw, 320px); }
+      #spriteImage { max-height: min(88vh, calc(100vh - 40px)); }
     }
     @media (orientation: portrait) and (max-width: 480px) {
       .character-layer {
         width: min(52vw, 280px);
         max-width: 58%;
-        padding-bottom: clamp(180px, 30vh, 260px);
       }
-      #spriteImage { max-height: min(48vh, calc(100vh - 200px)); }
+      #spriteImage { max-height: min(82vh, calc(100vh - 56px)); }
     }
     @media (min-width: 1200px) {
       .character-layer { width: min(38vw, 520px); }
-      #spriteImage { max-height: min(74vh, calc(100vh - 200px)); }
+      #spriteImage { max-height: min(94vh, calc(100vh - 48px)); }
     }
     #spriteImage.visible { opacity: 1; }
-    /* 立绘入场动画 */
-    #spriteImage.slide-in-right { animation: spriteSlideInRight 0.55s ease-out both; }
-    @keyframes spriteSlideInRight {
-      from { opacity: 0; transform: translateX(28px); }
+    #spriteImage.slide-in-left { animation: spriteSlideInLeft 0.55s ease-out both; }
+    @keyframes spriteSlideInLeft {
+      from { opacity: 0; transform: translateX(-28px); }
       to { opacity: 1; transform: translateX(0); }
     }
 
@@ -165,15 +193,23 @@
     .text-window {
       position: relative; margin: 0 auto; max-width: 860px;
       padding: 16px 24px 18px; pointer-events: auto;
+      cursor: pointer;
     }
-    .choices-in-window {
-      position: absolute; left: 0; right: 0; bottom: 100%;
-      margin-bottom: 6px; z-index: 6;
-      max-height: 28vh; overflow-y: auto;
-      display: none; flex-direction: column; gap: 4px;
+    .choices-panel {
+      position: absolute;
+      left: 40%;
+      top: 40%;
+      transform: translateY(-50%);
+      z-index: 8;
+      display: none;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+      max-height: 52vh;
+      overflow-y: auto;
       pointer-events: auto;
     }
-    .choices-in-window.visible { display: flex; }
+    .choices-panel.visible { display: flex; }
     .text-bg {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.88) 100%);
@@ -188,11 +224,25 @@
     .text-name.visible { display: block; }
     .text-body {
       font-size: 15px; line-height: 1.5; color: rgba(255,255,255,.88);
-      min-height: 3.5em;
+      height: 7.5em;
+      max-height: 7.5em;
+      overflow: hidden;
       position: relative;
+    }
+    .text-body.text-measure {
+      position: absolute;
+      left: 0;
+      top: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: -1;
     }
     .text-body p { margin-bottom: 0.3em; }
     .text-body p:last-child { margin-bottom: 0; }
+    .text-body .typing-wait {
+      margin: 0;
+      line-height: 1.5;
+    }
     .text-body .scene-title {
       font-size: 13px; color: rgba(200,180,255,.6); letter-spacing: 3px;
       margin-bottom: 8px; display: block;
@@ -210,19 +260,44 @@
       z-index: 3; cursor: pointer;
     }
 
-    /* 选项（文本框上方，紧凑） */
-    .choices-overlay {
-      display: none;
-    }
+    /* 选项：右侧居中，宽度随文字 */
+    .choices-overlay { display: none; }
     .choice-btn {
-      background: rgba(30,30,46,0.92); border: 1px solid rgba(255,255,255,.12);
-      border-radius: 6px; color: #d4d4ea; padding: 8px 12px;
-      text-align: left; cursor: pointer; font-size: 13px;
-      font-family: inherit; line-height: 1.4; transition: all 0.2s;
-      backdrop-filter: blur(6px);
+      background: rgba(30, 30, 46, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      color: #e8e8f8;
+      padding: 12px 20px;
+      text-align: left;
+      cursor: pointer;
+      font-size: 16px;
+      font-family: inherit;
+      line-height: 1.45;
+      transition: all 0.2s;
+      backdrop-filter: blur(8px);
+      width: fit-content;
+      max-width: min(620px, 68vw);
+      animation: choiceSlideIn 0.35s ease-out both;
     }
-    .choice-btn:hover { border-color: #6c5ce7; background: rgba(108,92,231,0.2); transform: translateX(4px); }
-    .choice-hint { display: block; font-size: 11px; color: rgba(200,180,255,.4); margin-top: 2px; letter-spacing: 1px; }
+    .choice-btn:hover {
+      border-color: #6c5ce7;
+      background: rgba(108, 92, 231, 0.22);
+      transform: translateX(4px);
+    }
+    .choice-label { display: block; }
+    .choice-num {
+      color: #c8b4ff;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+    .choice-hint {
+      display: block;
+      font-size: 12px;
+      color: rgba(200, 180, 255, 0.45);
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+    .choice-btn-free .choice-num { display: none; }
 
     /* 加载状态 */
     .loading-overlay {
@@ -241,7 +316,7 @@
     .loading-text { font-size: 13px; color: rgba(200,180,255,.6); letter-spacing: 2px; }
 
     /* 对话框内等待省略号 */
-    .typing-wait { color: rgba(200,180,255,.5); font-style: italic; }
+    .typing-wait { color: rgba(200,180,255,.5); font-style: italic; line-height: 1.5; }
     .typing-dots span {
       animation: typingDot 1.2s infinite;
       opacity: 0.3;
@@ -254,6 +329,30 @@
     }
 
     .tts-indicator[data-offline="1"] { opacity: 0.35; }
+
+    /* 剧情加载 Toast */
+    #storyToast {
+      position: fixed;
+      left: 50%;
+      bottom: clamp(130px, 20vh, 200px);
+      transform: translateX(-50%) translateY(10px);
+      z-index: 25;
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: rgba(22, 20, 42, 0.92);
+      border: 1px solid rgba(200, 180, 255, 0.35);
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 13px;
+      letter-spacing: 1px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      backdrop-filter: blur(8px);
+    }
+    #storyToast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
 
     /* 错误 */
     .error-overlay {
@@ -356,11 +455,8 @@
 
     /* ===== 选项入场动画 ===== */
     @keyframes choiceSlideIn {
-      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
       to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .choice-btn {
-      animation: choiceSlideIn 0.35s ease-out both;
     }
 
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
@@ -507,6 +603,11 @@
     <div id="startSub" class="sub">—— 古风奇幻 · AI Visual Novel ——</div>
     <div id="startTitle" class="title">月下长安</div>
     <div id="startDesc" class="desc">上元灯夜 · 长安满城花灯如昼<br>一块玉佩 · 六个各怀心事的人 · 一段横跨十年的旧案</div>
+    <div id="continueBlock">
+      <div class="continue-title">发现未完成的故事进度</div>
+      <div class="continue-meta" id="continueMeta"></div>
+      <button type="button" class="btn-start btn-continue" onclick="continueSavedGame()">继续游戏 →</button>
+    </div>
     <label>你的名字</label>
     <input type="text" id="playerName" value="陈远" maxlength="8">
     <label>你的性格底色</label>
@@ -516,7 +617,8 @@
       <div class="pers-opt selected" data-val="gentle" onclick="selectPers(this)"><span class="emoji">🌙</span>温柔体贴</div>
       <div class="pers-opt" data-val="tsundere" onclick="selectPers(this)"><span class="emoji">🔥</span>傲娇毒舌</div>
     </div>
-    <button class="btn-start" onclick="startGame()">开始故事 →</button>
+    <button type="button" class="btn-start" id="startStoryBtn" onclick="startGame()">开始故事 →</button>
+    <button type="button" class="btn-start btn-secondary-start" id="newStoryBtn" style="display:none;margin-top:10px" onclick="startGame()">开始新故事（覆盖存档）</button>
   </div>
 </div>
 
@@ -536,10 +638,12 @@
   <!-- 点击翻页区域 -->
   <div class="click-area" id="clickArea" onclick="advancePage()"></div>
 
+  <!-- 选项（右侧居中） -->
+  <div class="choices-panel choices-overlay" id="choicesOverlay"></div>
+
   <!-- 文本框 -->
   <div class="text-layer">
     <div class="text-window">
-      <div class="choices-in-window choices-overlay" id="choicesOverlay"></div>
       <div class="text-bg"></div>
       <div class="text-inner">
         <div class="text-name" id="textName"></div>
@@ -594,6 +698,7 @@
   <audio id="ttsPlayer" preload="auto" style="display:none"></audio>
   <!-- TTS 状态指示器 -->
   <div id="ttsIndicator" class="tts-indicator">♪</div>
+  <div id="storyToast" aria-live="polite"></div>
 </div>
 
 <!-- API 配置弹窗 -->
