@@ -25,10 +25,9 @@ jobs:
           ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
         run: npm install
 
-      - name: Enable Windows symlink support
+      - name: Prepare winCodeSign cache (CI symlink fix)
         shell: pwsh
-        run: |
-          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1
+        run: ./scripts/prepare-wincodesign-cache.ps1
 
       - name: Build Windows packages
         env:
