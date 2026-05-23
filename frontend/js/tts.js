@@ -9,10 +9,26 @@
     let indicator = null;
     let preloaded = null;
     let serverReady = null;
+    let activeVoiceKey = null;
+    let playAbort = null;
+    let preloadAbort = null;
+    let playGeneration = 0;
+    let paintToken = 0;
 
     function bindDom(ttsPlayer, ttsIndicator) {
       player = ttsPlayer;
       indicator = ttsIndicator;
+    }
+
+    /** 等对话框文字完成绘制后再执行（避免先出声后出字） */
+    function afterTextPaint(fn) {
+      const token = paintToken;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (token !== paintToken) return;
+          fn();
+        });
+      });
     }
 
     async function checkStatus() {
@@ -45,12 +61,40 @@
       indicator.classList.toggle('active', !!active);
     }
 
-    function stop() {
+    function makeVoiceKey(charId, turnCount, pageIdx) {
+      return charId + '_' + turnCount + '_' + pageIdx;
+    }
+
+    function abortPlayRequest() {
+      if (playAbort) playAbort.abort();
+      playAbort = null;
+    }
+
+    function abortPreloadRequest() {
+      if (preloadAbort) preloadAbort.abort();
+      preloadAbort = null;
+    }
+
+    function stopPlayback() {
       if (player) {
         player.pause();
         player.currentTime = 0;
+        player.removeAttribute('src');
+        try {
+          player.load();
+        } catch (_) {
+          /* ignore */
+        }
       }
       showIndicator(false);
+    }
+
+    function stop() {
+      abortPlayRequest();
+      playGeneration += 1;
+      paintToken += 1;
+      activeVoiceKey = null;
+      stopPlayback();
     }
 
     function extractDialogue(pageText) {
@@ -66,15 +110,11 @@
       };
     }
 
-    function fetchAndPlay(dialogue, turnCount, pageIdx) {
-      if (!enabled) return;
-      if (serverReady === false) return;
-
-      showIndicator(true);
-
-      fetch(apiBaseUrl + '/tts', {
+    function requestTtsAudio(dialogue, turnCount, pageIdx, signal) {
+      return fetch(apiBaseUrl + '/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal,
         body: JSON.stringify({
           charId: dialogue.charId,
           text: dialogue.dialogue,
@@ -82,18 +122,39 @@
           turnCount,
           pageIdx,
         }),
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error('TTS ' + response.status);
-          return response.blob();
-        })
+      }).then((response) => {
+        if (!response.ok) throw new Error('TTS ' + response.status);
+        return response.blob();
+      });
+    }
+
+    function startPlayback(src, voiceKey) {
+      if (!player || activeVoiceKey !== voiceKey) return;
+      player.src = src;
+      showIndicator(true);
+      return player.play().catch((err) => {
+        if (err?.name !== 'AbortError') console.warn('[TTS]', err.message || err);
+        showIndicator(false);
+      });
+    }
+
+    function fetchAndPlay(dialogue, turnCount, pageIdx, voiceKey, gen) {
+      if (!enabled || serverReady === false) return;
+      if (gen !== playGeneration || activeVoiceKey !== voiceKey) return;
+
+      abortPlayRequest();
+      playAbort = new AbortController();
+      const signal = playAbort.signal;
+
+      requestTtsAudio(dialogue, turnCount, pageIdx, signal)
         .then((blob) => {
+          if (gen !== playGeneration || activeVoiceKey !== voiceKey) return;
           if (!blob || blob.size < 100) throw new Error('empty audio');
-          if (!player) return;
-          player.src = URL.createObjectURL(blob);
-          return player.play();
+          return startPlayback(URL.createObjectURL(blob), voiceKey);
         })
         .catch((err) => {
+          if (err?.name === 'AbortError') return;
+          if (gen !== playGeneration || activeVoiceKey !== voiceKey) return;
           console.warn('[TTS]', err.message || err);
           showIndicator(false);
         });
@@ -108,16 +169,32 @@
         return;
       }
 
-      const voiceKey = dialogue.charId + '_' + turnCount + '_' + pageIdx;
-      if (preloaded && preloaded.dataset.voiceKey === voiceKey) {
-        player.src = preloaded.src;
-        player.play().catch(() => fetchAndPlay(dialogue, turnCount, pageIdx));
-        preloaded = null;
-        showIndicator(true);
-        return;
-      }
+      const voiceKey = makeVoiceKey(dialogue.charId, turnCount, pageIdx);
 
-      fetchAndPlay(dialogue, turnCount, pageIdx);
+      abortPlayRequest();
+      playGeneration += 1;
+      paintToken += 1;
+      stopPlayback();
+
+      activeVoiceKey = voiceKey;
+      const gen = playGeneration;
+      const paintAt = paintToken;
+
+      // 等文字渲染到屏幕后再开始播放/下载
+      afterTextPaint(() => {
+        if (paintAt !== paintToken || gen !== playGeneration || activeVoiceKey !== voiceKey) {
+          return;
+        }
+
+        if (preloaded && preloaded.dataset.voiceKey === voiceKey) {
+          const src = preloaded.src;
+          preloaded = null;
+          startPlayback(src, voiceKey);
+          return;
+        }
+
+        fetchAndPlay(dialogue, turnCount, pageIdx, voiceKey, gen);
+      });
     }
 
     function preloadNext(turnCount, pageIdx, pageText) {
@@ -125,27 +202,21 @@
       const dialogue = extractDialogue(pageText);
       if (!dialogue) return;
 
-      fetch(apiBaseUrl + '/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          charId: dialogue.charId,
-          text: dialogue.dialogue,
-          mood: dialogue.mood,
-          turnCount,
-          pageIdx,
-        }),
-      })
-        .then((r) => (r.ok ? r.blob() : null))
+      const voiceKey = makeVoiceKey(dialogue.charId, turnCount, pageIdx);
+      if (preloaded && preloaded.dataset.voiceKey === voiceKey) return;
+
+      abortPreloadRequest();
+      preloadAbort = new AbortController();
+      const signal = preloadAbort.signal;
+
+      requestTtsAudio(dialogue, turnCount, pageIdx, signal)
         .then((blob) => {
+          if (signal.aborted) return;
           if (!blob || blob.size < 100) return;
-          const audio = new Audio();
-          audio.src = URL.createObjectURL(blob);
-          audio.dataset.voiceKey =
-            dialogue.charId + '_' + turnCount + '_' + pageIdx;
-          audio.oncanplaythrough = () => {
-            preloaded = audio;
-          };
+
+          preloaded = new Audio();
+          preloaded.src = URL.createObjectURL(blob);
+          preloaded.dataset.voiceKey = voiceKey;
         })
         .catch(() => {});
     }

@@ -18,6 +18,7 @@ import sys
 import hashlib
 import time
 import functools
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -169,6 +170,7 @@ class TTSStatus(BaseModel):
 # ── 模型全局变量 ──────────────────────────────────────────
 _model: object | None = None
 _start_time: float = time.time()
+_generate_lock = threading.Lock()
 
 
 def load_model():
@@ -251,19 +253,21 @@ async def tts(req: TTSRequest):
     cache_path = get_cached_path(req.charId, req.turnCount, req.pageIdx)
 
     try:
-        # 如果缓存已存在，直接返回
         if cache_path.exists():
             print(f"[TTS] Cache hit: {cache_path.name}", flush=True)
             return FileResponse(str(cache_path), media_type="audio/wav")
 
-        # 生成语音（在 executor 中避免阻塞事件循环）
         import asyncio
 
+        def generate_with_lock() -> Path:
+            with _generate_lock:
+                if cache_path.exists():
+                    print(f"[TTS] Cache hit: {cache_path.name}", flush=True)
+                    return cache_path
+                return _generate_sync(req.text, voice_desc, cache_path)
+
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            functools.partial(_generate_sync, req.text, voice_desc, cache_path),
-        )
+        await loop.run_in_executor(None, generate_with_lock)
 
         return FileResponse(str(cache_path), media_type="audio/wav")
 

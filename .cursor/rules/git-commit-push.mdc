@@ -1,0 +1,24 @@
+---
+description: 用户说「提交代码」时默认 commit 后 push 到远程
+alwaysApply: true
+---
+
+# Git：提交代码默认含 push
+
+当用户说 **「提交代码」**、**「提交并推送」** 或类似表述时，默认执行完整流程：
+
+1. `git status` / `git diff` / `git log`（并行）
+2. 分析变更，撰写 commit message
+3. `git add` 相关文件 → `git commit`
+4. **`git push`**（默认执行，无需用户再单独说 push）
+
+## 例外
+
+- 用户明确说 **「只 commit 不 push」** / **「本地提交」** → 跳过 push
+- 用户明确说 **不要 push** / **不要 force push** → 遵守
+- push 失败时报告原因，不要擅自 `push --force`
+
+## 其他 git 指令
+
+- 用户只说 **「push」** → 仅 push，不新建 commit
+- 用户说 **「创建 PR」** → 按 create-pull-requests 规则，push 后建 PR

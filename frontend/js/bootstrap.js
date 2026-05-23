@@ -334,6 +334,7 @@ ${template.charactersPrompt}
   }
 
   function showTypingInDialog() {
+    tts.stop();
     isStreaming = true;
     choicesOverlay.classList.remove('visible');
     customInputInline.classList.remove('visible');
@@ -509,6 +510,8 @@ ${template.charactersPrompt}
   };
 
   function showPage(index) {
+    tts.stop();
+
     const pages = currentPages;
     if (index < 0 || index >= pages.length) {
       showChoices();
@@ -563,6 +566,7 @@ ${template.charactersPrompt}
   }
 
   function showChoices() {
+    tts.stop();
     awaitingChoice = true;
     choiceActions = [];
     textNext.textContent = '';

@@ -128,9 +128,9 @@ python frontend/server_tts.py
 bash frontend/start-tts.sh
 ```
 
-另开终端保持 `npm run dev` 运行。健康检查：`http://localhost:8080/proxy/tts/status`
+另开终端保持 `npm run dev` 运行。健康检查：`http://localhost:8080/proxy/tts/status`（端口以 `PORT` 为准）。
 
-情绪与语音说明见 [`docs/tts-plan.md`](docs/tts-plan.md)（基于 [OpenBMB/VoxCPM](https://github.com/OpenBMB/VoxCPM) Voice Design）。
+**完整配置、排错与局域网说明见 [`docs/TTS.md`](docs/TTS.md)。** 技术方案见 [`docs/tts-plan.md`](docs/tts-plan.md)（基于 [OpenBMB/VoxCPM](https://github.com/OpenBMB/VoxCPM) Voice Design）。
 
 #### 5. Electron 桌面版（v1.0）
 
@@ -153,7 +153,7 @@ npm run build:mac  # macOS dmg/zip（须在 Mac 上执行）
 | 弹出 API 配置 | 服务端未检测到 LLM Key 且本地无保存配置时正常行为；保存后会自动测试连接 |
 | 一直「正在落笔」无内容 | 确认 `LLM_BASE` 可访问，且上游支持 `POST /v1/chat/completions` |
 | 无立绘 | 月下长安等模板需 `frontend/assets/portraits/{角色Id}/*.png`；无 PNG 时不显示占位图 |
-| 无语音 | 先 `python frontend/server_tts.py`，再看 `/proxy/tts/status` 是否为 200 |
+| 无语音 | 见 [`docs/TTS.md`](docs/TTS.md)：启动 `server_tts.py`，检查 `/proxy/tts/status` 是否为 200 |
 | 流式不生效 | 上游需支持 `stream: true`；失败时会自动降级为非流式整包请求 |
 
 ---
