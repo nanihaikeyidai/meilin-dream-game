@@ -21,9 +21,13 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        env:
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
         run: npm install
 
       - name: Build Windows packages
+        env:
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
         run: npm run build:win
 
       - name: Upload Windows artifacts
@@ -63,6 +67,7 @@ jobs:
 
   publish:
     needs: [build-win]
+    if: needs.build-win.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Download Windows artifacts

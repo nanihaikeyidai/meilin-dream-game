@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.avg.menggongchang",
     "productName": "AVG梦工厂",
+    "executableName": "AVG-MengGongChang",
     "copyright": "Copyright © 2026 AVG梦工厂 Contributors",
     "directories": {
       "output": "dist",
@@ -55,7 +56,7 @@
           "arch": ["x64"]
         }
       ],
-      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+      "artifactName": "AVG-MengGongChang-${version}-win-${arch}.${ext}"
     },
     "mac": {
       "target": [
@@ -69,7 +70,7 @@
         }
       ],
       "category": "public.app-category.games",
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "artifactName": "AVG-MengGongChang-${version}-mac-${arch}.${ext}",
       "identity": null
     },
     "dmg": {
@@ -83,7 +84,7 @@
       "shortcutName": "AVG梦工厂"
     },
     "portable": {
-      "artifactName": "${productName}-${version}-win-portable.${ext}"
+      "artifactName": "AVG-MengGongChang-${version}-win-portable.${ext}"
     }
   }
 }

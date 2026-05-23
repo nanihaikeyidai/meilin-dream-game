@@ -40,8 +40,8 @@ npm run build:mac
 
 | 平台 | 典型产物 |
 |------|----------|
-| Windows | `AVG梦工厂-1.0.0-win-x64.exe`（安装程序）、`AVG梦工厂-1.0.0-win-portable.exe` |
-| macOS | `AVG梦工厂-1.0.0-mac-x64.dmg`、`AVG梦工厂-1.0.0-mac-arm64.dmg` |
+| Windows | `AVG-MengGongChang-1.0.0-win-x64.exe`（安装程序）、`AVG-MengGongChang-1.0.0-win-portable.exe` |
+| macOS | `AVG-MengGongChang-1.0.0-mac-x64.dmg`、`AVG-MengGongChang-1.0.0-mac-arm64.dmg` |
 
 ### 配置 API（桌面版）
 
