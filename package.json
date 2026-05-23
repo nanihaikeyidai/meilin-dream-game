@@ -29,7 +29,7 @@
   },
   "build": {
     "appId": "com.avg.menggongchang",
-    "productName": "AVG梦工厂",
+    "productName": "AVG-MengGongChang",
     "executableName": "AVG-MengGongChang",
     "copyright": "Copyright © 2026 AVG梦工厂 Contributors",
     "directories": {
@@ -75,14 +75,14 @@
       "identity": null
     },
     "dmg": {
-      "title": "AVG梦工厂 ${version}"
+      "title": "AVG-MengGongChang ${version}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "AVG梦工厂"
+      "shortcutName": "AVG-MengGongChang"
     },
     "portable": {
       "artifactName": "AVG-MengGongChang-${version}-win-portable.${ext}"

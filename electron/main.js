@@ -35,6 +35,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 640,
     show: false,
+    title: 'AVG梦工厂',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
