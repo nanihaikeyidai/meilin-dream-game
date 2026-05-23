@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-win:
     runs-on: windows-latest
@@ -34,6 +37,7 @@ jobs:
 
   build-mac:
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -55,4 +59,29 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.zip
-          if-no-files-found: error
+          if-no-files-found: warn
+
+  publish:
+    needs: [build-win]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: avg-menggongchang-windows
+          path: dist
+
+      - name: Download macOS artifacts (optional)
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: avg-menggongchang-macos
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/**
+          generate_release_notes: true
+          fail_on_unmatched_files: false
