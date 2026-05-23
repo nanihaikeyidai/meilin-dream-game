@@ -137,7 +137,7 @@ bash frontend/start-tts.sh
 Windows 防火墙需放行游戏端口（如 8081）：
 
 ```powershell
-New-NetFirewallRule -DisplayName "AVG-Skill Dev" -Direction Inbound -Protocol TCP -LocalPort 8081 -Action Allow
+New-NetFirewallRule -DisplayName "AVG梦工厂 Dev" -Direction Inbound -Protocol TCP -LocalPort 8081 -Action Allow
 ```
 
 ---

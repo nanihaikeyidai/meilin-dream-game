@@ -1,5 +1,5 @@
 /**
- * Girlgame 开发服务器（零依赖版）
+ * AVG梦工厂 开发服务器（零依赖版）
  * - 前端静态文件
  * - 剧本 markdown（/templates/）
  * - 代理 LLM：/proxy/chat/completions
@@ -377,7 +377,7 @@ function startServer(options = {}) {
       const url = `http://${publicHost}:${listenPort}`;
 
       if (options.silent !== true) {
-        console.log('🚀 Girlgame 开发服务器已启动');
+        console.log('🚀 AVG梦工厂 开发服务器已启动');
         console.log(`   📂 前端: ${url}`);
         console.log(`   🔗 LLM 代理: /proxy/chat/completions → ${process.env.LLM_BASE || 'http://localhost:8656'}${getLlmChatPath()}`);
         if (LLM_API_KEY) console.log('   🔑 LLM_API_KEY 已配置');

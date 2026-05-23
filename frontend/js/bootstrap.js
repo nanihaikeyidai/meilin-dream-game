@@ -469,7 +469,7 @@ ${template.charactersPrompt}
   window.showAbout = function () {
     closeMenu();
     showConfirm(
-      (template?.title || 'AVG') +
+      (template?.title || 'AVG梦工厂') +
         ' · AI 视觉小说\n\n提示词引擎 + Web 渲染\n模板：' +
         (template?.id || '')
     ).then(() => {});

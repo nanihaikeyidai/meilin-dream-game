@@ -1,4 +1,4 @@
-# AVG-Skill v1.0 发布与打包
+# AVG梦工厂 v1.0 发布与打包
 
 ## 版本说明
 
@@ -40,15 +40,15 @@ npm run build:mac
 
 | 平台 | 典型产物 |
 |------|----------|
-| Windows | `AVG-Skill-1.0.0-win-x64.exe`（安装程序）、`AVG-Skill-1.0.0-win-portable.exe` |
-| macOS | `AVG-Skill-1.0.0-mac-x64.dmg`、`AVG-Skill-1.0.0-mac-arm64.dmg` |
+| Windows | `AVG梦工厂-1.0.0-win-x64.exe`（安装程序）、`AVG梦工厂-1.0.0-win-portable.exe` |
+| macOS | `AVG梦工厂-1.0.0-mac-x64.dmg`、`AVG梦工厂-1.0.0-mac-arm64.dmg` |
 
 ### 配置 API（桌面版）
 
 1. 首次启动在界面内填写 **Base URL / API Key / 模型**
 2. 或在用户数据目录放置 `.env`（Windows 示例）：
    ```
-   %APPDATA%\avg-skill\.env
+   %APPDATA%\avg-menggongchang\.env
    ```
    内容参考项目根目录 `.env.example`
 

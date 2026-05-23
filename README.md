@@ -1,6 +1,6 @@
-# 🎮 AVG-Skill — AI 驱动的冒险游戏开发框架
+# 🎮 AVG梦工厂 — AI 视觉小说创作与游玩
 
-> **ADV**enture Game · 提示词驱动的交互式小说/AI 冒险游戏引擎
+> **ADV**enture Game · 用 AI 写故事、做立绘、听语音，一站式玩转视觉小说
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -8,23 +8,25 @@
 
 ## 📖 这是什么
 
-AVG-Skill 是一套**纯提示词（prompt）驱动的交互式冒险游戏开发框架**，运行在任意支持skill的agent上，把工程链接丢给agent，让它安装后对话开始游戏就可以，
-支持claudeCode 或其他ide，或者龙虾，hermes  [Hermes Agent](https://hermes-agent.nousresearch.com) 。AI 自动担任旁白、角色扮演和系统引擎，你只需要通过选择题推进故事。
+**AVG梦工厂** 是一套 AI 驱动的视觉小说平台：既能**在浏览器 / 桌面客户端里直接玩**（立绘、流式叙事、选项、语音），也支持在 Claude Code、Cursor、[Hermes Agent](https://hermes-agent.nousresearch.com) 等 Agent 里通过 Skill 模式对话开局。
 
-除 **AI Skill 模式**外，仓库已提供可本地运行的 **Web / Electron 视觉小说客户端**（立绘、流式叙事、选项、TTS）。
+你可以把它理解为：
+
+- **玩家的梦工厂** — 选剧本、创角色，AI 当场写剧情、配音、换表情
+- **作者的梦工厂** — 改 markdown 模板即可定制世界，无需从零写引擎
 
 ### 核心理念
 
 ```
-没有代码引擎，只有 prompt。
-所有游戏逻辑通过 AI 的叙事能力和隐式状态追踪来实现。
+剧情由 AI 实时书写，框架负责呈现与状态追踪。
+模板 + 提示词 = 可玩的视觉小说。
 ```
 
 这意味着：
 
-- **零依赖、零安装** — 有 AI 工具就能玩
-- **修改剧情 = 改 markdown** — 不需要懂编程
-- **完全开源** — 你的故事是你的，框架是开放的
+- **开箱即玩** — Web / 桌面客户端，`npm run dev` 即可本地运行
+- **修改剧情 = 改 markdown** — 模板在 `templates/` 目录
+- **完全开源** — MIT 许可，故事与素材归你所有
 
 ---
 
@@ -158,17 +160,16 @@ npm run build:mac  # macOS dmg/zip（须在 Mac 上执行）
 
 ---
 
-### 方式二：AI Skill 模式游玩
+### 方式二：Agent Skill 模式游玩
+
+在支持 Skill 的 Agent 中加载本仓库的 `SKILL.md`，然后对话开局即可：
 
 ```bash
-# 加载 skill
-skill_view('avg-skill')
-
-# 然后告诉 AI：
+# 示例：在 Agent 中加载 skill 后说
 「我要开一局校园青春模板」
-
-# AI 引导你创建角色 → 故事开始
 ```
+
+AI 引导你创建角色 → 故事开始。
 
 ### 自建模板
 
@@ -200,7 +201,7 @@ skill_view('avg-skill')
 ## 📁 项目结构
 
 ```
-avg-skill/
+项目根目录/
 ├── server.js                         # Web 开发服（静态资源 + LLM/TTS 代理，支持客户端 API 头透传）
 ├── .env.example                      # LLM / TTS 环境变量示例
 ├── package.json                      # npm run dev / test:preflight / npm start

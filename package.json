@@ -1,9 +1,9 @@
 {
-  "name": "avg-skill",
+  "name": "avg-menggongchang",
   "version": "1.0.0",
-  "description": "AVG-Skill — AI 驱动的视觉小说 / 冒险游戏框架",
+  "description": "AVG梦工厂 — AI 视觉小说创作与游玩平台",
   "main": "electron/main.js",
-  "author": "AVG-Skill Contributors",
+  "author": "AVG梦工厂 Contributors",
   "license": "MIT",
   "homepage": "https://github.com/nanihaikeyidai/meilin-dream-game",
   "repository": {
@@ -28,9 +28,9 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.girlgame.avg-skill",
-    "productName": "AVG-Skill",
-    "copyright": "Copyright © 2026 AVG-Skill Contributors",
+    "appId": "com.avg.menggongchang",
+    "productName": "AVG梦工厂",
+    "copyright": "Copyright © 2026 AVG梦工厂 Contributors",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -73,14 +73,14 @@
       "identity": null
     },
     "dmg": {
-      "title": "AVG-Skill ${version}"
+      "title": "AVG梦工厂 ${version}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "AVG-Skill"
+      "shortcutName": "AVG梦工厂"
     },
     "portable": {
       "artifactName": "${productName}-${version}-win-portable.${ext}"
