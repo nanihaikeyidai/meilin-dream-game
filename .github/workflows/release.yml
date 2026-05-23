@@ -29,13 +29,22 @@ jobs:
         shell: pwsh
         run: ./scripts/prepare-wincodesign-cache.ps1
 
-      - name: Build Windows packages
+      - name: Build Windows portable
         env:
           ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           WIN_CSC_LINK: ""
           WIN_CSC_KEY_PASSWORD: ""
-        run: npm run build:win
+        run: npx electron-builder --win portable --x64
+
+      - name: Build Windows installer
+        continue-on-error: true
+        env:
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          WIN_CSC_LINK: ""
+          WIN_CSC_KEY_PASSWORD: ""
+        run: npx electron-builder --win nsis --x64
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
