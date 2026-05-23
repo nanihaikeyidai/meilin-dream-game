@@ -122,7 +122,9 @@ function parseTemplateFromDir(dirPath) {
   }
 }
 
-function setupIpcHandlers() {
+function setupIpcHandlers(options = {}) {
+  const getBaseUrl = options.getBaseUrl || (() => null);
+  const getAppRoot = options.getAppRoot || (() => path.join(__dirname, '..'));
   ipcMain.handle('apiKey:save', (event, data) => {
     setConfig('apiConfig', data);
     return { success: true };
@@ -133,7 +135,7 @@ function setupIpcHandlers() {
   });
 
   ipcMain.handle('templates:list', () => {
-    const templatesDir = path.join(__dirname, '..', 'templates');
+    const templatesDir = path.join(getAppRoot(), 'templates');
     const entries = fs.readdirSync(templatesDir, { withFileTypes: true });
     const templates = [];
 
@@ -161,7 +163,7 @@ function setupIpcHandlers() {
   });
 
   ipcMain.handle('fs:read', (event, filePath) => {
-    const templatesDir = path.join(__dirname, '..', 'templates');
+    const templatesDir = path.join(getAppRoot(), 'templates');
     const target = path.resolve(templatesDir, filePath);
     if (!target.startsWith(templatesDir)) {
       throw new Error('Invalid path');
@@ -200,8 +202,13 @@ function setupIpcHandlers() {
 
   ipcMain.on('navigate:to', (event, page) => {
     const win = require('electron').BrowserWindow.fromWebContents(event.sender);
+    const base = getBaseUrl();
+    if (win && base) {
+      win.loadURL(`${base}/${page}.html`);
+      return;
+    }
     if (win) {
-      win.loadFile(path.join(__dirname, '..', 'frontend', `${page}.html`));
+      win.loadFile(path.join(getAppRoot(), 'frontend', `${page}.html`));
     }
   });
 }

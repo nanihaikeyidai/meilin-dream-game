@@ -1,18 +1,89 @@
 {
-  "name": "girlgame-skill",
+  "name": "avg-skill",
   "version": "1.0.0",
-  "description": "Girl Game Skill",
+  "description": "AVG-Skill — AI 驱动的视觉小说 / 冒险游戏框架",
   "main": "electron/main.js",
+  "author": "AVG-Skill Contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/nanihaikeyidai/meilin-dream-game",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nanihaikeyidai/meilin-dream-game.git"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "node server.js",
     "smoke": "bash frontend/smoke_test.sh",
     "test:preflight": "node scripts/avg-preflight.mjs",
     "test:preflight:layout": "node scripts/avg-preflight.mjs --allow-llm-fail",
-    "test": "node scripts/avg-preflight.mjs --allow-llm-fail"
+    "test": "node scripts/avg-preflight.mjs --allow-llm-fail",
+    "pack": "electron-builder --dir",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win --x64",
+    "build:mac": "electron-builder --mac --x64 --arm64",
+    "build:all": "electron-builder --win --mac --x64 --arm64"
   },
   "devDependencies": {
-    "electron": "^35.0.0"
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
   },
-  "dependencies": {}
+  "build": {
+    "appId": "com.girlgame.avg-skill",
+    "productName": "AVG-Skill",
+    "copyright": "Copyright © 2026 AVG-Skill Contributors",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/**/*",
+      "templates/**/*",
+      "server.js",
+      ".env.example",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.games",
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "identity": null
+    },
+    "dmg": {
+      "title": "AVG-Skill ${version}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AVG-Skill"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-win-portable.${ext}"
+    }
+  }
 }

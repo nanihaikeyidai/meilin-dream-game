@@ -132,13 +132,18 @@ bash frontend/start-tts.sh
 
 情绪与语音说明见 [`docs/tts-plan.md`](docs/tts-plan.md)（基于 [OpenBMB/VoxCPM](https://github.com/OpenBMB/VoxCPM) Voice Design）。
 
-#### 5. Electron 桌面版（可选）
+#### 5. Electron 桌面版（v1.0）
 
 ```bash
-npm start
+npm install
+npm start          # 开发运行
+npm run build:win  # Windows 安装包 + 便携版 → dist/
+npm run build:mac  # macOS dmg/zip（须在 Mac 上执行）
 ```
 
-首次在启动页填写 **Base URL / API Key / 模型名**，再走「选择剧本并开始」。桌面版直连配置的 LLM；浏览器模式同样可在页面配置 API，或由服务端 `.env` 统一代理。
+打包说明见 [`docs/RELEASE.md`](docs/RELEASE.md)。桌面版内嵌本地服务器，与浏览器版功能一致；API 可在应用内配置，或写入用户目录 `.env`（见 `.env.example`）。
+
+**v1.0 发布：** 推送 git 标签 `v1.0.0` 可触发 GitHub Actions 在 Windows / macOS 上自动构建安装包。
 
 #### 6. 常见问题
 

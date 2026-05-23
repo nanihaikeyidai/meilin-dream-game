@@ -3,7 +3,7 @@
  */
 (function (global) {
   const STORAGE_KEY = 'girlgame_api_config';
-  const DEFAULT_MODEL = 'deepseek-chat';
+  const DEFAULT_MODEL = 'deepseek-v4-flash';
 
   async function loadApiConfig() {
     if (global.electronAPI?.apiKey?.load) {

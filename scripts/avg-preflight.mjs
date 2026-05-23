@@ -69,7 +69,7 @@ async function main() {
   } catch { /* ignore */ }
 
   const chatBody = JSON.stringify({
-    model: healthData.llmModel || 'deepseek-chat',
+    model: healthData.llmModel || 'deepseek-v4-flash',
     messages: [{ role: 'user', content: 'ping' }],
     max_tokens: 8,
     stream: false,
