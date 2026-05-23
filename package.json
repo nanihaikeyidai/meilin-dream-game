@@ -45,7 +45,11 @@
       "package.json"
     ],
     "asar": true,
+    "forceCodeSigning": false,
     "win": {
+      "sign": null,
+      "signDlls": false,
+      "verifyUpdateCodeSignature": false,
       "signAndEditExecutable": false,
       "target": [
         {

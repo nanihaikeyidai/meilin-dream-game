@@ -29,6 +29,8 @@ jobs:
         env:
           ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          WIN_CSC_LINK: ""
+          WIN_CSC_KEY_PASSWORD: ""
         run: npm run build:win
 
       - name: Upload Windows artifacts
