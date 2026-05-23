@@ -37,7 +37,7 @@ AVG-Skill 是一套**纯提示词（prompt）驱动的交互式冒险游戏开�
 | 组件 | 说明 |
 |------|------|
 | Node.js | ≥ 18，用于 `node server.js` |
-| LLM 服务 | OpenAI 兼容接口，默认代理到 `http://localhost:8656` |
+| LLM 服务 | OpenAI 兼容接口；可在 **游戏内配置**（Base URL / API Key / 模型），或通过 `.env` / 环境变量预设 |
 | TTS（可选） | Python 3.10+、`voxcpm` 包、本机 VoxCPM2 模型，仅 **月下长安** 模板启用语音 |
 
 #### 1. 启动游戏服务
@@ -68,6 +68,16 @@ npm run dev
 ```
 
 浏览器打开：**http://localhost:8080/**
+
+**配置 LLM（三选一，任选其一即可）：**
+
+| 方式 | 说明 |
+|------|------|
+| **游戏内弹窗**（推荐） | 未配置时，启动页或点击「开始故事」会自动弹出；游戏中 ⚙ → **API 配置** 可随时修改 |
+| **`.env` 文件** | 复制 `.env.example` → `.env`，填写 `LLM_BASE` / `LLM_API_KEY` / `LLM_MODEL` |
+| **Mock 模式** | 设置 `AVG_MOCK_LLM=1`，无需真实 API，仅测布局/UI |
+
+DeepSeek 示例：`LLM_BASE=https://api.deepseek.com/v1`，`LLM_MODEL=deepseek-chat`
 
 **自测（Agent / CLI）：**
 
@@ -102,8 +112,9 @@ http://localhost:8080/game.html?template=campus-summer
 - **点击屏幕 /「▼ 点击继续」**：翻页阅读叙事
 - **选项**：出现在文本框上方，选 1～3 或点 **✎** 自由输入
 - **菜单**：存档 / 读档 / 返回（`game.html` 内菜单按钮）
-- **立绘**：LLM 输出 `[MOOD]` / `[EXPR]` 后自动切换 PNG 表情（月下长安 6 角色已齐）
+- **立绘**：LLM 输出 `[MOOD]` / `[EXPR]` 后自动切换 PNG 表情（**月下长安** 6 角色、**校园** 7 角色已齐；无 PNG 时不显示占位图）
 - **语音**：需启动 TTS；有 `「对白」` 的台词会按 `[MOOD:]` 情绪合成（旁白不播）
+- **对话框**：底部留白、紧凑行距；选项在文本框上方，最多 3 个
 
 #### 4. 启动 TTS（可选，月下长安）
 
@@ -127,13 +138,14 @@ bash frontend/start-tts.sh
 npm start
 ```
 
-首次在启动页填写 **Base URL / API Key / 模型名**，再走「选择剧本并开始」。桌面版直连配置的 LLM；浏览器模式走本地 `/proxy`，无需在页面填 Key。
+首次在启动页填写 **Base URL / API Key / 模型名**，再走「选择剧本并开始」。桌面版直连配置的 LLM；浏览器模式同样可在页面配置 API，或由服务端 `.env` 统一代理。
 
 #### 6. 常见问题
 
 | 现象 | 处理 |
 |------|------|
-| 502 / 上游服务不可达 | 默认代理 `localhost:8656` 未启动。用 `.env` 配 `LLM_BASE`+`LLM_API_KEY`，或 `AVG_MOCK_LLM=1` 后**重启** `npm run dev` |
+| 502 / 上游服务不可达 | 点击 **「配置 API」** 填写 Base URL 与 Key；或在 `.env` 配 `LLM_BASE`+`LLM_API_KEY`；或 `AVG_MOCK_LLM=1` 后**重启** `npm run dev` |
+| 弹出 API 配置 | 服务端未检测到 LLM Key 且本地无保存配置时正常行为；保存后会自动测试连接 |
 | 一直「正在落笔」无内容 | 确认 `LLM_BASE` 可访问，且上游支持 `POST /v1/chat/completions` |
 | 无立绘 | 月下长安等模板需 `frontend/assets/portraits/{角色Id}/*.png`；无 PNG 时不显示占位图 |
 | 无语音 | 先 `python frontend/server_tts.py`，再看 `/proxy/tts/status` 是否为 200 |
@@ -184,16 +196,19 @@ skill_view('avg-skill')
 
 ```
 avg-skill/
-├── server.js                         # Web 开发服（静态资源 + LLM/TTS 代理）
-├── package.json                      # npm run dev / npm start
+├── server.js                         # Web 开发服（静态资源 + LLM/TTS 代理，支持客户端 API 头透传）
+├── .env.example                      # LLM / TTS 环境变量示例
+├── package.json                      # npm run dev / test:preflight / npm start
+├── scripts/avg-preflight.mjs         # HTTP 预检（资产、页面、LLM）
 ├── frontend/
-│   ├── index.html                    # 启动页
+│   ├── index.html                    # 启动页（浏览器/API 配置）
 │   ├── templates.html                # 选剧本
 │   ├── character.html                # 创角
-│   ├── game.html                     # 游戏主界面
-│   ├── js/                           # engine / bootstrap / stream / mood / tts
-│   ├── assets/portraits/             # 立绘 PNG（月下长安 6×8）
+│   ├── game.html                     # 游戏主界面（立绘 / 对话框 / API 弹窗）
+│   ├── js/                           # engine / bootstrap / api-config / stream / mood / tts
+│   ├── assets/portraits/             # 立绘 PNG（月下长安 6×8 + 校园 7×8）
 │   └── server_tts.py                 # VoxCPM2 TTS 服务
+├── .cursor/skills/avg-self-test/     # Cursor 自测技能与清单
 ├── electron/                         # 桌面客户端（可选）
 ├── SKILL.md                          # 框架核心引擎（系统提示词）
 ├── AVG.md                            # 工程说明
