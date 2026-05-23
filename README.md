@@ -50,17 +50,33 @@ npm install
 npm run dev
 ```
 
-按需设置环境变量：
+按需设置环境变量（推荐复制 `.env.example` → `.env`，`npm run dev` 会自动加载）：
 
 ```bash
 # Windows PowerShell 示例
 $env:PORT = "8080"
-$env:LLM_BASE = "http://localhost:8656"   # 你的 OpenAI 兼容 LLM 地址
+# 方案 A：DeepSeek / 任意 OpenAI 兼容 HTTPS API
+$env:LLM_BASE = "https://api.deepseek.com/v1"
+$env:LLM_API_KEY = "sk-..."              # 与 Hermes 配置中的 Key 相同即可
+$env:LLM_MODEL = "deepseek-chat"
+# 方案 B：本地 Hermes Gateway
+# $env:LLM_BASE = "http://localhost:8656"
+# 方案 C：无 LLM 仅测布局/UI
+# $env:AVG_MOCK_LLM = "1"
 $env:TTS_BASE = "http://localhost:7860"   # TTS 服务地址（见下方）
 npm run dev
 ```
 
 浏览器打开：**http://localhost:8080/**
+
+**自测（Agent / CLI）：**
+
+```bash
+npm run test:preflight          # HTTP 预检（资产、页面、LLM）
+npm run test:preflight:layout   # LLM 未开时仅测布局相关项
+```
+
+在 Cursor 中说「AVG 自测」或引用技能 `avg-self-test`，按 `.cursor/skills/avg-self-test/SKILL.md` 进游戏、交互、截图并对照规范。
 
 #### 2. 游戏流程
 
@@ -117,6 +133,7 @@ npm start
 
 | 现象 | 处理 |
 |------|------|
+| 502 / 上游服务不可达 | 默认代理 `localhost:8656` 未启动。用 `.env` 配 `LLM_BASE`+`LLM_API_KEY`，或 `AVG_MOCK_LLM=1` 后**重启** `npm run dev` |
 | 一直「正在落笔」无内容 | 确认 `LLM_BASE` 可访问，且上游支持 `POST /v1/chat/completions` |
 | 无立绘 | 月下长安等模板需 `frontend/assets/portraits/{角色Id}/*.png`；无 PNG 时不显示占位图 |
 | 无语音 | 先 `python frontend/server_tts.py`，再看 `/proxy/tts/status` 是否为 200 |

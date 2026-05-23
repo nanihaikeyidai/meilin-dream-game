@@ -7,7 +7,9 @@
     "start": "electron .",
     "dev": "node server.js",
     "smoke": "bash frontend/smoke_test.sh",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:preflight": "node scripts/avg-preflight.mjs",
+    "test:preflight:layout": "node scripts/avg-preflight.mjs --allow-llm-fail",
+    "test": "node scripts/avg-preflight.mjs --allow-llm-fail"
   },
   "devDependencies": {
     "electron": "^35.0.0"

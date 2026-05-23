@@ -97,10 +97,11 @@ fi
 echo "--- 5/6 立绘资产检查 ---"
 MISSING=0
 FOUND=0
-CHARACTERS=("huayingyue" "shenmingyue" "xieyunlan" "lihuaijin" "guqianfan" "gongsunlan")
-EXPRESSIONS=("default" "smile" "happy" "sad" "angry" "blush" "cold" "surprised")
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-for char in "${CHARACTERS[@]}"; do
+ANCIENT_CHARS=("huayingyue" "shenmingyue" "xieyunlan" "lihuaijin" "guqianfan" "gongsunlan")
+CAMPUS_CHARS=("linxue" "suyunxi" "shenqingci" "jiangxiaoyu" "xiazhiyao" "chengnianci" "yexiaoman")
+EXPRESSIONS=("default" "smile" "happy" "sad" "angry" "blush" "cold" "surprised")
+for char in "${ANCIENT_CHARS[@]}" "${CAMPUS_CHARS[@]}"; do
   for expr in "${EXPRESSIONS[@]}"; do
     path="$SCRIPT_DIR/assets/portraits/$char/$expr.png"
     if [ -f "$path" ]; then
@@ -110,15 +111,15 @@ for char in "${CHARACTERS[@]}"; do
     fi
   done
 done
-echo "  立绘: $FOUND/48 存在, $MISSING/48 缺失"
-if [ "$FOUND" -ge 48 ]; then
-  green "古风立绘齐全 ($FOUND/48 PNG)"
+echo "  立绘: $FOUND/104 存在, $MISSING/104 缺失"
+if [ "$FOUND" -ge 104 ]; then
+  green "古风+校园立绘齐全 ($FOUND/104 PNG)"
   PASS=$((PASS+1))
-elif [ "$FOUND" -ge 40 ]; then
-  green "立绘基本齐全 ($FOUND/48 PNG)"
+elif [ "$FOUND" -ge 96 ]; then
+  green "立绘基本齐全 ($FOUND/104 PNG)"
   PASS=$((PASS+1))
 else
-  red "立绘缺失过多 ($FOUND/48 PNG)"
+  red "立绘缺失过多 ($FOUND/104 PNG)"
   FAIL=$((FAIL+1))
 fi
 

@@ -2,48 +2,38 @@
  * LLM 调用：Electron 直连 / 浏览器走 server 代理
  */
 (function (global) {
-  const DEFAULT_MODEL = 'july';
-
-  async function loadApiConfig() {
-    if (global.electronAPI?.apiKey?.load) {
-      return global.electronAPI.apiKey.load();
-    }
-    try {
-      const raw = localStorage.getItem('girlgame_api_config');
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }
+  const { loadApiConfig, isConfigComplete, buildProxyRequest, getModel, DEFAULT_MODEL } =
+    global.AvgApiConfig;
 
   async function callLLM(messages, options) {
-    const model = options?.model || DEFAULT_MODEL;
     const temperature = options?.temperature ?? 0.7;
     const maxTokens = options?.maxTokens ?? 1024;
 
     if (global.electronAPI?.llm?.chat) {
       const config = await loadApiConfig();
-      if (!config.baseUrl || !config.apiKey) {
-        throw new Error('请先在设置页配置 API（Base URL 与 API Key）');
+      if (!isConfigComplete(config)) {
+        throw new Error('请先配置 API（Base URL 与 API Key）');
       }
       return global.electronAPI.llm.chat(messages, {
         baseUrl: config.baseUrl,
         apiKey: config.apiKey,
-        model: config.model || model,
+        model: options?.model || getModel(config),
         temperature,
         maxTokens,
       });
     }
 
+    const { headers, body } = await buildProxyRequest({
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      ...(options?.model ? { model: options.model } : {}),
+    });
+
     const response = await fetch('/proxy/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

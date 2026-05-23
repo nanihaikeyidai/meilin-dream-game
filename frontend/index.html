@@ -14,10 +14,10 @@
         <p class="subtitle" id="modeHint">选择进入方式</p>
       </div>
       <div class="card-body">
-        <div id="electronConfig" style="display:none">
+        <div id="apiConfigSection" style="display:none">
           <div class="form-group">
             <label for="baseUrl">Base URL</label>
-            <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1" autocomplete="off">
+            <input type="text" id="baseUrl" placeholder="https://api.deepseek.com/v1" autocomplete="off">
           </div>
           <div class="form-group">
             <label for="apiKey">API Key</label>
@@ -28,12 +28,12 @@
             <input type="text" id="modelName" placeholder="deepseek-chat" autocomplete="off">
           </div>
           <div class="form-actions">
-            <button id="saveBtn" class="btn-primary">保存配置</button>
+            <button id="saveBtn" class="btn-primary">保存并测试</button>
             <span id="statusMsg" class="status-msg"></span>
           </div>
         </div>
         <p id="browserHint" class="subtitle" style="display:none;margin-bottom:16px">
-          浏览器模式通过本地 <code>node server.js</code> 代理 LLM，无需在此填写 API Key。
+          服务端已配置 LLM，可直接进入游戏。
         </p>
         <div class="form-actions form-actions-center">
           <button id="gotoGameBtn" class="btn-primary btn-enter">选择剧本并开始</button>
@@ -44,19 +44,13 @@
       </div>
     </div>
   </div>
+  <script src="js/api-config.js"></script>
   <script>
     const isElectron = typeof window.electronAPI !== 'undefined';
     const modeHint = document.getElementById('modeHint');
-    const electronConfig = document.getElementById('electronConfig');
+    const apiConfigSection = document.getElementById('apiConfigSection');
     const browserHint = document.getElementById('browserHint');
-
-    if (isElectron) {
-      modeHint.textContent = 'Electron 模式 — 请配置 LLM API';
-      electronConfig.style.display = 'block';
-    } else {
-      modeHint.textContent = '浏览器开发模式';
-      browserHint.style.display = 'block';
-    }
+    const gotoGameBtn = document.getElementById('gotoGameBtn');
 
     const baseUrlInput = document.getElementById('baseUrl');
     const apiKeyInput = document.getElementById('apiKey');
@@ -64,19 +58,22 @@
     const saveBtn = document.getElementById('saveBtn');
     const statusMsg = document.getElementById('statusMsg');
 
+    let needsClientConfig = false;
+
     function showStatus(msg, isError) {
       statusMsg.textContent = msg;
       statusMsg.className = 'status-msg' + (isError ? ' error' : ' success');
-      setTimeout(() => { statusMsg.textContent = ''; statusMsg.className = 'status-msg'; }, 3000);
+      setTimeout(() => { statusMsg.textContent = ''; statusMsg.className = 'status-msg'; }, 4000);
     }
 
     async function loadConfig() {
-      if (!isElectron) return;
       try {
-        const config = await window.electronAPI.apiKey.load();
-        baseUrlInput.value = config.baseUrl || '';
+        const config = isElectron
+          ? await window.electronAPI.apiKey.load()
+          : await AvgApiConfig.loadApiConfig();
+        baseUrlInput.value = config.baseUrl || 'https://api.deepseek.com/v1';
         apiKeyInput.value = config.apiKey || '';
-        modelNameInput.value = config.model || 'deepseek-chat';
+        modelNameInput.value = config.model || AvgApiConfig.DEFAULT_MODEL;
       } catch (e) {
         showStatus('加载配置失败', true);
       }
@@ -85,25 +82,63 @@
     async function saveConfig() {
       const baseUrl = baseUrlInput.value.trim();
       const apiKey = apiKeyInput.value.trim();
-      const model = modelNameInput.value.trim() || 'deepseek-chat';
-      if (!baseUrl || !apiKey) {
+      const model = modelNameInput.value.trim() || AvgApiConfig.DEFAULT_MODEL;
+      const config = { baseUrl, apiKey, model };
+      if (!AvgApiConfig.isConfigComplete(config)) {
         showStatus('请填写 Base URL 与 API Key', true);
-        return;
+        return false;
       }
       saveBtn.disabled = true;
       try {
-        const result = await window.electronAPI.apiKey.save({ baseUrl, apiKey, model });
-        showStatus(result.success ? '保存成功' : '保存失败', !result.success);
+        if (isElectron) {
+          const result = await window.electronAPI.apiKey.save(config);
+          if (!result.success) throw new Error('保存失败');
+        } else {
+          await AvgApiConfig.saveApiConfig(config);
+          await AvgApiConfig.testApiConfig(config);
+        }
+        needsClientConfig = false;
+        showStatus('保存成功', false);
+        return true;
       } catch (e) {
-        showStatus('保存出错：' + e.message, true);
+        showStatus(e.message || '保存出错', true);
+        return false;
       } finally {
         saveBtn.disabled = false;
       }
     }
 
+    async function initPage() {
+      if (isElectron) {
+        modeHint.textContent = 'Electron 模式 — 请配置 LLM API';
+        apiConfigSection.style.display = 'block';
+        await loadConfig();
+        return;
+      }
+
+      modeHint.textContent = '浏览器开发模式';
+      const setup = await AvgApiConfig.resolveLlmSetup();
+      needsClientConfig = setup.mode === 'needs_config';
+      if (needsClientConfig) {
+        modeHint.textContent = '请先配置 AI 引擎';
+        apiConfigSection.style.display = 'block';
+        await loadConfig();
+      } else {
+        browserHint.style.display = 'block';
+      }
+    }
+
     if (saveBtn) saveBtn.addEventListener('click', saveConfig);
 
-    document.getElementById('gotoGameBtn').addEventListener('click', () => {
+    gotoGameBtn.addEventListener('click', async () => {
+      if (needsClientConfig || isElectron) {
+        const ok = await saveConfig();
+        if (!ok && (needsClientConfig || isElectron)) return;
+        if (isElectron && !AvgApiConfig.isConfigComplete({
+          baseUrl: baseUrlInput.value.trim(),
+          apiKey: apiKeyInput.value.trim(),
+        })) return;
+      }
       if (isElectron) {
         window.electronAPI.navigate.to('templates');
       } else {
@@ -111,7 +146,7 @@
       }
     });
 
-    loadConfig();
+    initPage();
   </script>
 </body>
 </html>

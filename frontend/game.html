@@ -101,45 +101,70 @@
       z-index: 1;
     }
 
-    /* 人物立绘层 - 响应式 */
+    /* 人物立绘层：背景之上、对话框之下，靠右半身 */
     .character-layer {
-      position: absolute; left: 50%; transform: translateX(-50%);
-      z-index: 2; pointer-events: none;
-      bottom: 28%;
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: auto;
+      width: min(44vw, 460px);
+      max-width: 52%;
+      z-index: 2;
+      pointer-events: none;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 0 clamp(6px, 1.5vw, 20px) clamp(168px, 24vh, 240px) 0;
     }
     #spriteImage {
-      max-height: 62vh; width: auto;
+      display: block;
+      max-width: 100%;
+      max-height: min(70vh, calc(100vh - clamp(150px, 22vh, 240px)));
+      width: auto;
+      height: auto;
       object-fit: contain;
-      opacity: 0; transition: opacity 0.8s ease;
-      filter: drop-shadow(0 0 20px rgba(0,0,0,0.4));
+      object-position: bottom right;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      filter: drop-shadow(0 4px 24px rgba(0,0,0,0.45));
     }
     @media (max-height: 600px) {
-      .character-layer { bottom: 12%; }
-      #spriteImage { max-height: 45vh; }
+      .character-layer {
+        width: min(40vw, 320px);
+        padding-bottom: clamp(120px, 18vh, 160px);
+      }
+      #spriteImage { max-height: min(58vh, calc(100vh - 160px)); }
     }
     @media (orientation: portrait) and (max-width: 480px) {
-      .character-layer { bottom: 42%; }
-      #spriteImage { max-height: 38vh; }
+      .character-layer {
+        width: min(52vw, 280px);
+        max-width: 58%;
+        padding-bottom: clamp(180px, 30vh, 260px);
+      }
+      #spriteImage { max-height: min(48vh, calc(100vh - 200px)); }
     }
-    @media (min-height: 900px) {
-      .character-layer { bottom: 32%; }
-      #spriteImage { max-height: 68vh; }
+    @media (min-width: 1200px) {
+      .character-layer { width: min(38vw, 520px); }
+      #spriteImage { max-height: min(74vh, calc(100vh - 200px)); }
     }
     #spriteImage.visible { opacity: 1; }
     /* 立绘入场动画 */
-    #spriteImage.slide-in-left { animation: spriteSlideInLeft 0.6s ease-out both; }
-    #spriteImage.slide-in-right { animation: spriteSlideInRight 0.6s ease-out both; }
-    @keyframes spriteSlideInLeft { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
-    @keyframes spriteSlideInRight { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+    #spriteImage.slide-in-right { animation: spriteSlideInRight 0.55s ease-out both; }
+    @keyframes spriteSlideInRight {
+      from { opacity: 0; transform: translateX(28px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
 
-    /* 文本框 - 底部覆盖 */
+    /* 文本框 - 底部留白，不贴边 */
     .text-layer {
       position: absolute; bottom: 0; left: 0; width: 100%;
       z-index: 5; pointer-events: none;
+      padding: 0 clamp(12px, 2vw, 24px) clamp(28px, 5vh, 56px);
     }
     .text-window {
       position: relative; margin: 0 auto; max-width: 860px;
-      padding: 18px 28px 28px; pointer-events: auto;
+      padding: 16px 24px 18px; pointer-events: auto;
     }
     .choices-in-window {
       position: absolute; left: 0; right: 0; bottom: 100%;
@@ -152,29 +177,29 @@
     .text-bg {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.88) 100%);
-      border-radius: 12px 12px 0 0; backdrop-filter: blur(8px);
+      border-radius: 12px; backdrop-filter: blur(8px);
       border: 1px solid rgba(255,255,255,.06);
-      border-bottom: none;
     }
-    .text-inner { position: relative; z-index: 1; }
+    .text-inner { position: relative; z-index: 1; padding-bottom: 2px; }
     .text-name {
       font-size: 15px; font-weight: 600; letter-spacing: 2px;
       color: #c8b4ff; margin-bottom: 6px; display: none;
     }
     .text-name.visible { display: block; }
     .text-body {
-      font-size: 15px; line-height: 1.8; color: rgba(255,255,255,.88);
-      min-height: 4.2em; max-height: 8em; overflow: hidden;
+      font-size: 15px; line-height: 1.5; color: rgba(255,255,255,.88);
+      min-height: 3.5em;
       position: relative;
     }
-    .text-body p { margin-bottom: 0.4em; }
+    .text-body p { margin-bottom: 0.3em; }
+    .text-body p:last-child { margin-bottom: 0; }
     .text-body .scene-title {
       font-size: 13px; color: rgba(200,180,255,.6); letter-spacing: 3px;
       margin-bottom: 8px; display: block;
     }
     .text-next {
       text-align: right; font-size: 12px; color: rgba(200,180,255,.4);
-      letter-spacing: 2px; margin-top: 6px;
+      letter-spacing: 2px; margin-top: 8px; padding-bottom: 2px;
       animation: pulse 1.5s ease-in-out infinite;
     }
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.8; } }
@@ -391,6 +416,84 @@
     #confirmOverlay .btn-confirm.primary {
       background: rgba(108, 92, 231, 0.35);
     }
+
+    /* ===== API 配置弹窗 ===== */
+    #apiConfigOverlay {
+      z-index: 10002;
+    }
+    #apiConfigOverlay .api-config-box {
+      background: rgba(22, 20, 42, 0.97);
+      border: 1px solid rgba(200, 180, 255, 0.35);
+      border-radius: 12px;
+      padding: 28px 32px;
+      width: min(420px, 92vw);
+      color: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+    #apiConfigOverlay h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #e8e0ff;
+    }
+    #apiConfigOverlay .api-config-hint {
+      font-size: 13px;
+      color: rgba(200, 180, 255, 0.65);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    #apiConfigOverlay label {
+      display: block;
+      font-size: 12px;
+      color: rgba(200, 180, 255, 0.75);
+      margin-bottom: 6px;
+    }
+    #apiConfigOverlay input {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(200, 180, 255, 0.2);
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    #apiConfigOverlay input:focus {
+      outline: none;
+      border-color: rgba(200, 180, 255, 0.5);
+    }
+    #apiConfigOverlay .api-config-status {
+      min-height: 20px;
+      font-size: 12px;
+      margin-bottom: 12px;
+      color: rgba(255, 180, 180, 0.9);
+    }
+    #apiConfigOverlay .api-config-status.ok {
+      color: rgba(160, 255, 200, 0.9);
+    }
+    #apiConfigOverlay .api-config-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    #apiConfigOverlay .btn-api {
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(200, 180, 255, 0.35);
+      background: rgba(200, 180, 255, 0.12);
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    #apiConfigOverlay .btn-api.primary {
+      background: rgba(108, 92, 231, 0.45);
+    }
+    #apiConfigOverlay .btn-api:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -463,7 +566,10 @@
   <!-- 错误 -->
   <div class="error-overlay" id="errorOverlay">
     <div class="error-box" id="errorText">连接失败</div>
-    <button class="btn-retry" onclick="retryGame()">重新加载</button>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+      <button class="btn-retry" onclick="openApiConfig()">配置 API</button>
+      <button class="btn-retry" onclick="retryGame()">重新加载</button>
+    </div>
   </div>
 
   <!-- 菜单按钮 + 面板 -->
@@ -479,6 +585,7 @@
   <!-- 设置齿轮按钮 + 面板 -->
   <button id="settingsBtn" onclick="toggleSettings()">⚙</button>
   <div id="settingsPanel">
+    <button class="menu-item" onclick="openApiConfig()"><span class="menu-icon">🔑</span>API 配置</button>
     <button class="menu-item" onclick="restartGame()"><span class="menu-icon">↻</span>重新开始</button>
     <button class="menu-item" onclick="showAbout()"><span class="menu-icon">i</span>关于</button>
   </div>
@@ -487,6 +594,25 @@
   <audio id="ttsPlayer" preload="auto" style="display:none"></audio>
   <!-- TTS 状态指示器 -->
   <div id="ttsIndicator" class="tts-indicator">♪</div>
+</div>
+
+<!-- API 配置弹窗 -->
+<div class="error-overlay" id="apiConfigOverlay">
+  <div class="api-config-box">
+    <h2>配置 AI 引擎</h2>
+    <p class="api-config-hint">填写 OpenAI 兼容接口。DeepSeek 示例：<code style="color:rgba(200,180,255,.85)">https://api.deepseek.com/v1</code></p>
+    <label for="cfgBaseUrl">Base URL</label>
+    <input type="text" id="cfgBaseUrl" placeholder="https://api.deepseek.com/v1" autocomplete="off">
+    <label for="cfgApiKey">API Key</label>
+    <input type="password" id="cfgApiKey" placeholder="sk-..." autocomplete="off">
+    <label for="cfgModel">模型名称</label>
+    <input type="text" id="cfgModel" placeholder="deepseek-chat" autocomplete="off">
+    <div class="api-config-status" id="apiConfigStatus"></div>
+    <div class="api-config-actions">
+      <button type="button" class="btn-api" id="apiConfigCancel">取消</button>
+      <button type="button" class="btn-api primary" id="apiConfigSave">保存并测试</button>
+    </div>
+  </div>
 </div>
 
 <!-- 自定义确认框 -->
@@ -503,6 +629,7 @@
 <script src="js/template-registry.js"></script>
 <script src="js/mood.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/api-config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/stream.js"></script>
 <script src="js/tts.js"></script>

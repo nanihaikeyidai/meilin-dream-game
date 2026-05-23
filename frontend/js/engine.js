@@ -57,7 +57,7 @@
     function updateSprite(spriteImage, textNameEl, charName, expression, moodLabel) {
       const charId = portraits[charName];
       if (!charId) {
-        spriteImage.classList.remove('visible', 'slide-in-left', 'slide-in-right');
+        spriteImage.classList.remove('visible', 'slide-in-right');
         spriteImage.src = '';
         currentCharName = null;
         currentCharId = null;
@@ -73,7 +73,7 @@
 
       function tryNext() {
         if (pathIndex >= paths.length) {
-          spriteImage.classList.remove('visible', 'slide-in-left', 'slide-in-right');
+          spriteImage.classList.remove('visible', 'slide-in-right');
           spriteImage.src = '';
           return;
         }
@@ -88,9 +88,9 @@
 
       spriteImage.classList.add('visible');
       if (isNewChar) {
-        spriteImage.classList.remove('slide-in-left', 'slide-in-right');
+        spriteImage.classList.remove('slide-in-right');
         void spriteImage.offsetWidth;
-        spriteImage.classList.add(Math.random() > 0.5 ? 'slide-in-left' : 'slide-in-right');
+        spriteImage.classList.add('slide-in-right');
       }
 
       currentCharName = charName;
@@ -111,10 +111,6 @@
       if (global.AvgMood) {
         const beat = global.AvgMood.parsePageBeat(text, portraits);
         if (!beat) {
-          spriteImage.classList.remove('visible', 'slide-in-left', 'slide-in-right');
-          spriteImage.src = '';
-          currentCharName = null;
-          currentCharId = null;
           textNameEl.classList.remove('visible');
           return null;
         }
@@ -129,7 +125,10 @@
       }
 
       const charName = detectCharacter(text);
-      if (!charName) return null;
+      if (!charName) {
+        textNameEl.classList.remove('visible');
+        return null;
+      }
       const expr = detectExpression(text) || 'default';
       updateSprite(spriteImage, textNameEl, charName, expr);
       return { charName, expression: expr };

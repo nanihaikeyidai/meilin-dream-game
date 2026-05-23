@@ -2,23 +2,21 @@
  * LLM 流式输出（OpenAI 兼容 SSE）
  */
 (function (global) {
-  const DEFAULT_MODEL = 'july';
-
   async function callLLMStream(messages, callbacks) {
     const { onDelta, onDone, onError } = callbacks || {};
-    const model = global.AvgApi?.DEFAULT_MODEL || DEFAULT_MODEL;
 
     try {
+      const { headers, body } = await global.AvgApiConfig.buildProxyRequest({
+        messages,
+        temperature: 0.7,
+        max_tokens: 1024,
+        stream: true,
+      });
+
       const response = await fetch('/proxy/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.7,
-          max_tokens: 1024,
-          stream: true,
-        }),
+        headers,
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {

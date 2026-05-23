@@ -5,6 +5,8 @@
   const { getTemplate } = window.AvgTemplates;
   const { createEngine, escapeHtml, splitIntoPages } = window.AvgEngine;
   const { callLLM } = window.AvgApi;
+  const { saveApiConfig, loadApiConfig, isConfigComplete, resolveLlmSetup, testApiConfig, DEFAULT_MODEL } =
+    window.AvgApiConfig;
   const { callLLMStream } = window.AvgStream;
   const { save: saveGame, load: loadGame } = window.AvgSave;
 
@@ -32,6 +34,111 @@
   const errorOverlay = document.getElementById('errorOverlay');
   const errorText = document.getElementById('errorText');
   const customInputInline = document.getElementById('customInputInline');
+
+  function formatConnectError(err) {
+    const msg = err?.message || String(err);
+    let extra = '';
+    try {
+      const jsonMatch = msg.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const body = JSON.parse(jsonMatch[0]);
+        if (body.hint) extra = '。' + body.hint;
+        else if (body.error === '上游服务不可达' || body.needsClientConfig) {
+          extra = '。请点击「配置 API」填写 Base URL 与 API Key';
+        }
+      }
+    } catch {
+      /* ignore parse errors */
+    }
+    return '连接失败：' + msg + extra;
+  }
+
+  let apiConfigPromise = null;
+
+  function fillApiConfigForm(config) {
+    document.getElementById('cfgBaseUrl').value =
+      config.baseUrl || 'https://api.deepseek.com/v1';
+    document.getElementById('cfgApiKey').value = config.apiKey || '';
+    document.getElementById('cfgModel').value = config.model || DEFAULT_MODEL;
+  }
+
+  function showApiConfigModal(existingConfig, options) {
+    if (apiConfigPromise) return apiConfigPromise;
+    const opts = options || {};
+    const overlay = document.getElementById('apiConfigOverlay');
+    const status = document.getElementById('apiConfigStatus');
+    const saveBtn = document.getElementById('apiConfigSave');
+    const cancelBtn = document.getElementById('apiConfigCancel');
+    fillApiConfigForm(existingConfig || {});
+    status.textContent = '';
+    status.className = 'api-config-status';
+    overlay.classList.add('visible');
+
+    apiConfigPromise = new Promise((resolve) => {
+      async function onSave() {
+        const config = {
+          baseUrl: document.getElementById('cfgBaseUrl').value.trim(),
+          apiKey: document.getElementById('cfgApiKey').value.trim(),
+          model: document.getElementById('cfgModel').value.trim(),
+        };
+        if (!isConfigComplete(config)) {
+          status.textContent = '请填写 Base URL' + (config.baseUrl && !config.apiKey ? ' 与 API Key' : '');
+          return;
+        }
+        saveBtn.disabled = true;
+        status.textContent = '正在测试连接…';
+        try {
+          await saveApiConfig(config);
+          if (!window.electronAPI?.llm?.chat) {
+            await testApiConfig(config);
+          }
+          status.textContent = '保存成功';
+          status.className = 'api-config-status ok';
+          overlay.classList.remove('visible');
+          cleanup(true);
+        } catch (e) {
+          status.textContent = e.message;
+          status.className = 'api-config-status';
+        } finally {
+          saveBtn.disabled = false;
+        }
+      }
+
+      function onCancel() {
+        if (opts.required) {
+          status.textContent = '需要配置 API 才能开始游戏';
+          return;
+        }
+        overlay.classList.remove('visible');
+        cleanup(false);
+      }
+
+      function cleanup(result) {
+        saveBtn.onclick = null;
+        cancelBtn.onclick = null;
+        apiConfigPromise = null;
+        resolve(result);
+      }
+
+      saveBtn.onclick = onSave;
+      cancelBtn.onclick = onCancel;
+    });
+
+    return apiConfigPromise;
+  }
+
+  async function ensureApiConfig() {
+    const setup = await resolveLlmSetup();
+    if (setup.mode !== 'needs_config') return true;
+    return showApiConfigModal(setup.config, { required: true });
+  }
+
+  window.openApiConfig = async function () {
+    errorOverlay.classList.remove('visible');
+    document.getElementById('settingsPanel')?.classList.remove('visible');
+    const config = await loadApiConfig();
+    return showApiConfigModal(config, { required: false });
+  };
 
   function personalityLabel(key) {
     const map = {
@@ -190,7 +297,7 @@ ${template.charactersPrompt}
       finishAssistantResponse(response);
     } catch (e) {
       isStreaming = false;
-      errorText.textContent = '连接失败：' + (prevErr?.message || e.message);
+      errorText.textContent = formatConnectError(prevErr || e);
       errorOverlay.classList.add('visible');
     }
   }
@@ -201,12 +308,14 @@ ${template.charactersPrompt}
     playerAttrs.personality = el.dataset.val;
   };
 
-  window.startGame = function () {
+  window.startGame = async function () {
+    if (!(await ensureApiConfig())) return;
     const name = document.getElementById('playerName').value.trim() || template.defaultPlayerName;
     playerAttrs.name = name;
     document.getElementById('startOverlay').style.display = 'none';
     document.getElementById('gameScreen').style.display = 'block';
     document.getElementById('menuBtn').classList.add('visible');
+    document.getElementById('settingsBtn').classList.add('visible');
     initGame();
   };
 
@@ -508,6 +617,8 @@ ${template.charactersPrompt}
       }
       const confirm = document.getElementById('confirmOverlay');
       if (confirm?.classList.contains('visible')) return;
+      const apiCfg = document.getElementById('apiConfigOverlay');
+      if (apiCfg?.classList.contains('visible')) return;
     }
     if (['Enter', ' ', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
@@ -533,12 +644,13 @@ ${template.charactersPrompt}
 
       applyStartScreen(template);
       storyContent = await loadStoryMarkdown(ctx.templateId);
+      document.getElementById('settingsBtn')?.classList.add('visible');
 
       if (ctx.skipStart) {
         document.getElementById('startOverlay').style.display = 'none';
         document.getElementById('gameScreen').style.display = 'block';
         document.getElementById('menuBtn').classList.add('visible');
-        initGame();
+        if (await ensureApiConfig()) initGame();
       }
     } catch (e) {
       console.error(e);

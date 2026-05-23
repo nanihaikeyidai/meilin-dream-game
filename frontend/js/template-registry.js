@@ -80,15 +80,15 @@
         'classroom, schoolyard, photo_hall, rooftop, festival, night_sky, summer_farewell',
       portraits: {
         林雪: 'linxue', 苏云溪: 'suyunxi', 沈清辞: 'shenqingci',
-        江晓渔: 'jiangxiaoyu', 夏知遥: 'xiazhiyao', 陈一鸣: 'chenyiming',
-        程念慈: 'chengnian', 叶小满: 'yexiaoman',
+        江晓渔: 'jiangxiaoyu', 夏知遥: 'xiazhiyao',
+        程念慈: 'chengnianci', 叶小满: 'yexiaoman',
       },
       charactersPrompt: `- 林雪 — 温柔内敛的班长
 - 苏云溪 — 开朗活泼的青梅竹马
 - 沈清辞 — 安静内敛的文艺少女
 - 江晓渔 — 元气跳脱的转学生
 - 夏知遥 — 外冷内热的学生会副会长
-- 陈一鸣 — 话痨好友，气氛担当
+- 陈一鸣 — 话痨好友，气氛担当（暂无立绘）
 - 程念慈 / 叶小满 — 后期可解锁角色`,
       ttsEnabled: false,
     },

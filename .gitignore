@@ -33,6 +33,7 @@ node_modules/
 # Secrets & credentials
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 *.secret
