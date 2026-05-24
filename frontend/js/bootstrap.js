@@ -38,12 +38,51 @@
   const storyToast = document.getElementById('storyToast');
   let storyToastTimer = null;
 
-  function showStoryToast(message) {
+  function showStoryToast(message, options) {
     if (!storyToast) return;
+    const opts = options || {};
+    const isError = opts.type === 'error';
+    const duration = opts.duration ?? (isError ? 4500 : 1800);
     storyToast.textContent = message;
+    storyToast.classList.toggle('error', isError);
     storyToast.classList.add('visible');
+    if (isError) storyToast.setAttribute('aria-live', 'assertive');
+    else storyToast.setAttribute('aria-live', 'polite');
     clearTimeout(storyToastTimer);
-    storyToastTimer = setTimeout(() => storyToast.classList.remove('visible'), 1800);
+    storyToastTimer = setTimeout(() => {
+      storyToast.classList.remove('visible', 'error');
+      storyToast.setAttribute('aria-live', 'polite');
+    }, duration);
+  }
+
+  function showErrorToast(message) {
+    showStoryToast(message, { type: 'error' });
+  }
+
+  function summarizeApiError(err) {
+    const full = formatConnectError(err);
+    return full.length > 140 ? full.slice(0, 137) + '…' : full;
+  }
+
+  function restoreDialogAfterApiError() {
+    const lastAssistant = messages.filter((m) => m.role === 'assistant').pop();
+    if (lastAssistant) {
+      const { pages } = splitIntoPages(lastAssistant.content, textBody);
+      currentPages = pages;
+      if (pages.length > 0) {
+        showPage(pages.length - 1);
+      } else {
+        showChoices();
+      }
+      return;
+    }
+    textBody.textContent = '剧情生成失败，请检查网络与 API 配置后重试。';
+    textName.textContent = '';
+    textNext.textContent = '';
+    currentPages = [];
+    currentPage = -1;
+    choicesOverlay.classList.remove('visible');
+    customInputInline.classList.remove('visible');
   }
 
   function formatConnectError(err) {
@@ -369,7 +408,7 @@ ${template.charactersPrompt}
           }
           finishAssistantResponse(full);
         },
-        onError: () => fallbackLLM(),
+        onError: (err) => fallbackLLM(err),
       });
     } catch (e) {
       await fallbackLLM(e);
@@ -382,8 +421,8 @@ ${template.charactersPrompt}
       finishAssistantResponse(response);
     } catch (e) {
       isStreaming = false;
-      errorText.textContent = formatConnectError(prevErr || e);
-      errorOverlay.classList.add('visible');
+      showErrorToast(summarizeApiError(prevErr || e));
+      restoreDialogAfterApiError();
     }
   }
 
