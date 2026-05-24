@@ -14,6 +14,38 @@
 | **播放内容** | 带角色名 + `「对白」` 的台词；**纯旁白不播** |
 | **情绪** | LLM 输出 `[MOOD: xxx]`，映射为 VoxCPM2 括号内语气描述 |
 | **缓存** | 生成结果写入 `frontend/assets/voices/{charId}_{turn}_{page}.wav` |
+| **音色锁定** | 每角色参考音 `frontend/assets/voice_refs/{charId}.wav`，Clone 模式固定音色 |
+
+---
+
+## 1.1 参考音与 Clone（v0.2）
+
+同角色每句音色一致，依赖 **VoxCPM2 `reference_wav_path`**：
+
+| 角色 ID | 参考台词（bootstrap） | 文件 |
+|---------|---------------------|------|
+| xieyunlan | 此事，与你无关。 | `voice_refs/xieyunlan.wav` |
+| huayingyue | 你来啦。 | `voice_refs/huayingyue.wav` |
+| guqianfan | 走，别处说话去。 | `voice_refs/guqianfan.wav` |
+| shenmingyue | 说重点。 | `voice_refs/shenmingyue.wav` |
+| lihuaijin | 请坐吧。 | `voice_refs/lihuaijin.wav` |
+| gongsunlan | 且慢。 | `voice_refs/gongsunlan.wav` |
+
+**生成 / 重新生成参考音：**
+
+```powershell
+$env:VOXCPM2_PATH = "F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2"
+python scripts/generate_voice_refs.py
+python scripts/generate_voice_refs.py --force   # 覆盖已有
+```
+
+生成后需 **重启 TTS 服务**，并建议清空旧对白缓存：
+
+```powershell
+Remove-Item frontend/assets/voices/*.wav -ErrorAction SilentlyContinue
+```
+
+`GET /tts/status` 返回 `clone_refs` 字段，可确认 6 个参考音是否就绪。
 
 ---
 
