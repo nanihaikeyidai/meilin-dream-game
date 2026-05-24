@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 """
-月下长安 — TTS 语音服务后端
-VoxCPM2：参考音 Clone（锁定音色）+ MOOD 语气控制
+AVG TTS 语音服务 — VoxCPM2 Clone + MOOD 语气控制
+资源按剧本分目录：assets/tts/{templateId}/voice_refs|cache/
 
 启动:
   python frontend/server_tts.py
-
-API:
-  POST /tts  — 生成语音，返回 WAV 字节流
-  GET  /tts/status — 健康检查
 """
 
 import os
@@ -16,13 +12,21 @@ import time
 import threading
 from pathlib import Path
 
-import numpy as np
 import soundfile as sf
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from tts_paths import (
+    DEFAULT_TEMPLATE_ID,
+    cache_path,
+    ensure_template_dirs,
+    list_template_ids,
+    list_voice_ref_ids,
+    resolve_voice_ref,
+    sanitize_template_id,
+)
 from tts_voice_config import (
     CLONE_GEN_KWARGS,
     DESIGN_GEN_KWARGS,
@@ -36,13 +40,7 @@ MODEL_PATH = os.environ.get(
     r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2",
 )
 
-ASSETS_DIR = Path(__file__).resolve().parent / "assets"
-VOICE_DIR = ASSETS_DIR / "voices"
-VOICE_REF_DIR = ASSETS_DIR / "voice_refs"
-VOICE_DIR.mkdir(parents=True, exist_ok=True)
-VOICE_REF_DIR.mkdir(parents=True, exist_ok=True)
-
-app = FastAPI(title="月下长安 TTS", version="0.2.0")
+app = FastAPI(title="AVG TTS", version="0.3.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,6 +50,7 @@ app.add_middleware(
 
 
 class TTSRequest(BaseModel):
+    templateId: str = DEFAULT_TEMPLATE_ID
     charId: str
     text: str
     mood: str = "neutral"
@@ -63,7 +62,7 @@ class TTSStatus(BaseModel):
     status: str
     model_loaded: bool
     uptime: float
-    clone_refs: dict[str, bool]
+    templates: dict[str, dict[str, bool]]
 
 
 _model: object | None = None
@@ -71,14 +70,9 @@ _start_time: float = time.time()
 _generate_lock = threading.Lock()
 
 
-def get_ref_path(char_id: str) -> Path | None:
-    path = VOICE_REF_DIR / f"{char_id}.wav"
-    return path if path.is_file() else None
-
-
 def load_model():
     global _model
-    print(f"[TTS] Loading VoxCPM2 model from: {MODEL_PATH}", flush=True)
+    print(f"[TTS] Loading VoxCPM2 from: {MODEL_PATH}", flush=True)
     from voxcpm.core import VoxCPM
 
     _model = VoxCPM(
@@ -87,8 +81,11 @@ def load_model():
         enable_denoiser=False,
         optimize=True,
     )
-    refs = [p.stem for p in VOICE_REF_DIR.glob("*.wav")]
-    print(f"[TTS] Model loaded. Voice refs: {refs or '(none — run scripts/generate_voice_refs.py)'}", flush=True)
+    templates = list_template_ids()
+    print(
+        f"[TTS] Model loaded. Templates: {templates or '(none — run scripts/generate_voice_refs.py)'}",
+        flush=True,
+    )
 
 
 @app.on_event("startup")
@@ -101,42 +98,50 @@ async def startup():
 
 @app.get("/tts/status")
 async def status():
-    clone_refs = {
-        p.stem: True for p in VOICE_REF_DIR.glob("*.wav")
-    }
+    templates: dict[str, dict[str, bool]] = {}
+    for tid in list_template_ids() or [DEFAULT_TEMPLATE_ID]:
+        templates[tid] = {cid: True for cid in list_voice_ref_ids(tid)}
     return TTSStatus(
         status="ok",
         model_loaded=_model is not None,
         uptime=time.time() - _start_time,
-        clone_refs=clone_refs,
+        templates=templates,
     )
 
 
-def _generate_sync(char_id: str, text: str, mood: str, output_path: Path) -> Path:
+def _generate_sync(
+    template_id: str,
+    char_id: str,
+    text: str,
+    mood: str,
+    output_path: Path,
+) -> Path:
     if _model is None:
         raise RuntimeError("TTS model not loaded")
 
     mood = normalize_mood(mood)
-    ref_path = get_ref_path(char_id)
+    ref_path = resolve_voice_ref(template_id, char_id)
 
     if ref_path is not None:
         mood_style = get_mood_style(mood)
         full_text = f"{mood_style}{text}"
         print(
-            f"[TTS] clone {char_id} ref={ref_path.name} mood={mood} text='{text[:30]}...'",
+            f"[TTS] clone [{template_id}] {char_id} ref={ref_path.name} mood={mood} "
+            f"text='{text[:30]}...'",
             flush=True,
         )
-        audio_array: np.ndarray = _model.generate(
+        audio_array = _model.generate(
             text=full_text,
             reference_wav_path=str(ref_path),
             normalize=False,
             **CLONE_GEN_KWARGS,
         )
     else:
-        voice_desc = get_voice_desc(char_id, mood)
+        voice_desc = get_voice_desc(char_id, mood, template_id)
         full_text = f"{voice_desc}{text}"
         print(
-            f"[TTS] design(fallback) {char_id} mood={mood} text='{text[:30]}...'",
+            f"[TTS] design(fallback) [{template_id}] {char_id} mood={mood} "
+            f"text='{text[:30]}...'",
             flush=True,
         )
         audio_array = _model.generate(
@@ -150,12 +155,8 @@ def _generate_sync(char_id: str, text: str, mood: str, output_path: Path) -> Pat
     sf.write(str(output_path), audio_array, sample_rate)
 
     duration = len(audio_array) / sample_rate
-    print(f"[TTS] Saved: {output_path.name} ({duration:.2f}s)", flush=True)
+    print(f"[TTS] Saved: {output_path} ({duration:.2f}s)", flush=True)
     return output_path
-
-
-def get_cached_path(char_id: str, turn_count: int, page_idx: int) -> Path:
-    return VOICE_DIR / f"{char_id}_{turn_count}_{page_idx}.wav"
 
 
 @app.post("/tts")
@@ -166,31 +167,34 @@ async def tts(req: TTSRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Empty text")
 
-    cache_path = get_cached_path(req.charId, req.turnCount, req.pageIdx)
+    template_id = sanitize_template_id(req.templateId)
+    ensure_template_dirs(template_id)
+    out = cache_path(template_id, req.charId, req.turnCount, req.pageIdx)
 
     try:
-        if cache_path.exists():
-            print(f"[TTS] Cache hit: {cache_path.name}", flush=True)
-            return FileResponse(str(cache_path), media_type="audio/wav")
+        if out.exists():
+            print(f"[TTS] Cache hit: {out}", flush=True)
+            return FileResponse(str(out), media_type="audio/wav")
 
         import asyncio
 
         def generate_with_lock() -> Path:
             with _generate_lock:
-                if cache_path.exists():
-                    print(f"[TTS] Cache hit: {cache_path.name}", flush=True)
-                    return cache_path
+                if out.exists():
+                    print(f"[TTS] Cache hit: {out}", flush=True)
+                    return out
                 return _generate_sync(
+                    template_id,
                     req.charId,
                     req.text,
                     req.mood,
-                    cache_path,
+                    out,
                 )
 
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, generate_with_lock)
 
-        return FileResponse(str(cache_path), media_type="audio/wav")
+        return FileResponse(str(out), media_type="audio/wav")
 
     except Exception as e:
         print(f"[TTS] ERROR: {e}", flush=True)

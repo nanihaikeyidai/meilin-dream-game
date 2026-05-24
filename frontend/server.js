@@ -49,7 +49,8 @@ const MIME = {
 // ── 静态文件服务 ─────────────────────────────────────────
 function serveStatic(req, res) {
   let urlPath = req.url.split('?')[0];
-  if (urlPath.endsWith('/')) urlPath += 'index.html';
+  if (urlPath === '/' || urlPath === '') urlPath = '/templates.html';
+  else if (urlPath.endsWith('/')) urlPath += 'templates.html';
 
   // 安全检查：禁止跳出 ROOT
   let filePath = path.normalize(path.join(ROOT, urlPath));

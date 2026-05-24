@@ -4,6 +4,7 @@
 (function (global) {
   function createTts(template, portraits) {
     const apiBaseUrl = '/proxy';
+    const templateId = template?.id || 'changan-moon';
     const enabled = !!template.ttsEnabled;
     let player = null;
     let indicator = null;
@@ -116,6 +117,7 @@
         headers: { 'Content-Type': 'application/json' },
         signal,
         body: JSON.stringify({
+          templateId,
           charId: dialogue.charId,
           text: dialogue.dialogue,
           mood: dialogue.mood,

@@ -13,6 +13,8 @@
   let template = null;
   let engine = null;
   let tts = null;
+  let bgm = null;
+  let menuBgm = null;
 
   let playerAttrs = { name: '陈远', personality: 'gentle', personalityText: '' };
   let storyContent = '';
@@ -295,6 +297,8 @@
     document.getElementById('gameScreen').style.display = 'block';
     document.getElementById('menuBtn').classList.add('visible');
     document.getElementById('settingsBtn').classList.add('visible');
+    menuBgm?.stop();
+    bgm?.start();
   }
 
   async function applySaveData(data) {
@@ -497,6 +501,8 @@ ${template.charactersPrompt}
     document.getElementById('startOverlay').style.display = 'flex';
     document.getElementById('menuBtn').classList.remove('visible');
     tts.stop();
+    bgm?.stop();
+    menuBgm?.start();
   };
 
   window.restartGame = async function () {
@@ -799,6 +805,12 @@ ${template.charactersPrompt}
       );
       tts.checkStatus();
 
+      menuBgm = window.AvgBgm.createMenuBgm();
+      menuBgm.bindDom(document.getElementById('menuBgmPlayer'));
+
+      bgm = window.AvgBgm.createBgm(template);
+      bgm.bindDom(document.getElementById('bgmPlayer'));
+
       applyStartScreen(template);
       storyContent = await loadStoryMarkdown(ctx.templateId);
       document.getElementById('settingsBtn')?.classList.add('visible');
@@ -809,10 +821,12 @@ ${template.charactersPrompt}
       }
 
       if (ctx.skipStart && !hasPlayableSave(saved)) {
-        document.getElementById('startOverlay').style.display = 'none';
-        document.getElementById('gameScreen').style.display = 'block';
-        document.getElementById('menuBtn').classList.add('visible');
-        if (await ensureApiConfig()) initGame();
+        if (await ensureApiConfig()) {
+          enterGameScreen();
+          initGame();
+        }
+      } else {
+        menuBgm.start();
       }
     } catch (e) {
       console.error(e);

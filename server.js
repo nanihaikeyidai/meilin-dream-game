@@ -125,7 +125,7 @@ function createGameServer(options = {}) {
   function serveStatic(res, filePath) {
     fs.stat(filePath, (err, stat) => {
       if (err || !stat.isFile()) {
-        fs.readFile(path.join(frontendDir, 'index.html'), (err2, indexData) => {
+        fs.readFile(path.join(frontendDir, 'templates.html'), (err2, indexData) => {
           if (err2) {
             res.writeHead(500);
             res.end('Internal Server Error');
@@ -356,7 +356,7 @@ function createGameServer(options = {}) {
       return;
     }
 
-    const filePath = path.join(frontendDir, url.pathname === '/' ? 'index.html' : url.pathname);
+    const filePath = path.join(frontendDir, url.pathname === '/' ? 'templates.html' : url.pathname);
     serveStatic(res, filePath);
   });
 

@@ -93,7 +93,7 @@ npm run test:preflight:layout   # LLM 未开时仅测布局相关项
 #### 2. 游戏流程
 
 ```
-首页 index.html → 选择剧本 templates.html → 创建角色 character.html → 开始游戏 game.html
+根路径 /（templates.html）→ 创建角色 character.html → 开始游戏 game.html（index.html 仅跳转）
 ```
 
 | 步骤 | 页面 | 操作 |
@@ -218,7 +218,7 @@ AI 引导你创建角色 → 故事开始。
 ├── electron/                         # 桌面客户端（可选）
 ├── SKILL.md                          # 框架核心引擎（系统提示词）
 ├── AVG.md                            # 工程说明
-├── docs/                             # 设计 / PRD / TTS / UI 方案
+├── docs/                             # 设计 / PRD / TTS / UI 方案 / [待优化清单](docs/optimization-backlog.md)
 ├── references/
 │   ├── save-schema.md                # 存档格式规范
 │   ├── memory-system.md              # 三级记忆架构 + 感知隔离

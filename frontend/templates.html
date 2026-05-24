@@ -3,66 +3,169 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>选择剧本</title>
+  <title>选择剧本 — AVG梦工厂</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="page templates-page">
-    <div class="page-header">
-      <h1>选择剧本</h1>
-      <p class="subtitle">选择一个世界，开启你的故事</p>
+    <div class="page-header templates-page-header">
+      <div>
+        <h1>选择剧本</h1>
+        <p class="subtitle">选择一个世界，开启你的故事</p>
+      </div>
+      <button type="button" id="apiSettingsBtn" class="btn-api-settings" title="API 配置">⚙ API</button>
     </div>
-    <div class="templates-grid" id="templatesGrid">
-      <div class="template-card skeleton">
-        <div class="template-card-header">
-          <div class="skeleton-line skeleton-title"></div>
-          <div class="skeleton-line skeleton-tags"></div>
-        </div>
-        <div class="template-card-body">
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-        </div>
+    <div class="templates-grid" id="templatesGrid"></div>
+  </div>
+
+  <!-- API 配置 -->
+  <div class="templates-api-overlay" id="apiConfigOverlay" aria-hidden="true">
+    <div class="card templates-api-card">
+      <div class="card-header">
+        <h1>配置 AI 引擎</h1>
+        <p class="subtitle" id="apiConfigHint">填写 OpenAI 兼容接口后即可选择剧本</p>
       </div>
-      <div class="template-card skeleton">
-        <div class="template-card-header">
-          <div class="skeleton-line skeleton-title"></div>
-          <div class="skeleton-line skeleton-tags"></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="baseUrl">Base URL</label>
+          <input type="text" id="baseUrl" placeholder="https://api.deepseek.com/v1" autocomplete="off">
         </div>
-        <div class="template-card-body">
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
+        <div class="form-group">
+          <label for="apiKey">API Key</label>
+          <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
         </div>
-      </div>
-      <div class="template-card skeleton">
-        <div class="template-card-header">
-          <div class="skeleton-line skeleton-title"></div>
-          <div class="skeleton-line skeleton-tags"></div>
+        <div class="form-group">
+          <label for="modelName">模型名称</label>
+          <input type="text" id="modelName" placeholder="deepseek-v4-flash" autocomplete="off">
         </div>
-        <div class="template-card-body">
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-        </div>
-      </div>
-      <div class="template-card skeleton">
-        <div class="template-card-header">
-          <div class="skeleton-line skeleton-title"></div>
-          <div class="skeleton-line skeleton-tags"></div>
-        </div>
-        <div class="template-card-body">
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
+        <div class="form-actions">
+          <button type="button" id="saveBtn" class="btn-primary">保存并测试</button>
+          <button type="button" id="apiCancelBtn" class="btn-primary btn-secondary" style="display:none">稍后配置</button>
+          <span id="statusMsg" class="status-msg"></span>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- 自定义剧本 -->
+  <div class="templates-api-overlay" id="customTemplateOverlay" aria-hidden="true">
+    <div class="card templates-api-card">
+      <div class="card-header">
+        <h1>自定义剧本</h1>
+        <p class="subtitle">输入 <code>templates/</code> 下剧本文件夹名称（需含 <code>story/main.md</code>）</p>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="customTemplateId">剧本 ID</label>
+          <input type="text" id="customTemplateId" placeholder="例如 my-story" autocomplete="off">
+        </div>
+        <div class="form-actions">
+          <button type="button" id="customConfirmBtn" class="btn-primary">确认进入</button>
+          <button type="button" id="customCancelBtn" class="btn-primary btn-secondary">取消</button>
+          <span id="customStatusMsg" class="status-msg"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api-config.js"></script>
+  <script src="js/template-registry.js"></script>
   <script>
-    async function fetchTemplateList() {
-      if (window.electronAPI?.templates?.list) {
-        return window.electronAPI.templates.list();
+    const isElectron = typeof window.electronAPI !== 'undefined';
+    const apiOverlay = document.getElementById('apiConfigOverlay');
+    const customOverlay = document.getElementById('customTemplateOverlay');
+    const apiCancelBtn = document.getElementById('apiCancelBtn');
+    const grid = document.getElementById('templatesGrid');
+
+    const baseUrlInput = document.getElementById('baseUrl');
+    const apiKeyInput = document.getElementById('apiKey');
+    const modelNameInput = document.getElementById('modelName');
+    const saveBtn = document.getElementById('saveBtn');
+    const statusMsg = document.getElementById('statusMsg');
+
+    let apiConfigRequired = false;
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function showStatus(msg, isError) {
+      statusMsg.textContent = msg;
+      statusMsg.className = 'status-msg' + (isError ? ' error' : ' success');
+      if (!isError) {
+        setTimeout(() => {
+          statusMsg.textContent = '';
+          statusMsg.className = 'status-msg';
+        }, 3000);
       }
-      const res = await fetch('/api/templates');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
+    }
+
+    function showCustomStatus(msg, isError) {
+      const el = document.getElementById('customStatusMsg');
+      el.textContent = msg;
+      el.className = 'status-msg' + (isError ? ' error' : ' success');
+    }
+
+    async function loadApiForm() {
+      const config = isElectron
+        ? await window.electronAPI.apiKey.load()
+        : await AvgApiConfig.loadApiConfig();
+      baseUrlInput.value = config.baseUrl || 'https://api.deepseek.com/v1';
+      apiKeyInput.value = config.apiKey || '';
+      modelNameInput.value = config.model || AvgApiConfig.DEFAULT_MODEL;
+    }
+
+    async function needsApiConfig() {
+      if (isElectron) {
+        const config = await window.electronAPI.apiKey.load();
+        return !AvgApiConfig.isConfigComplete(config);
+      }
+      const setup = await AvgApiConfig.resolveLlmSetup();
+      return setup.mode === 'needs_config';
+    }
+
+    function showApiOverlay(required) {
+      apiConfigRequired = required;
+      apiOverlay.classList.add('visible');
+      apiOverlay.setAttribute('aria-hidden', 'false');
+      apiCancelBtn.style.display = required ? 'none' : 'inline-block';
+      loadApiForm();
+    }
+
+    function hideApiOverlay() {
+      apiOverlay.classList.remove('visible');
+      apiOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    async function saveApiConfigForm() {
+      const config = {
+        baseUrl: baseUrlInput.value.trim(),
+        apiKey: apiKeyInput.value.trim(),
+        model: modelNameInput.value.trim() || AvgApiConfig.DEFAULT_MODEL,
+      };
+      if (!AvgApiConfig.isConfigComplete(config)) {
+        showStatus('请填写 Base URL 与 API Key', true);
+        return false;
+      }
+      saveBtn.disabled = true;
+      try {
+        if (isElectron) {
+          const result = await window.electronAPI.apiKey.save(config);
+          if (!result.success) throw new Error('保存失败');
+        } else {
+          await AvgApiConfig.saveApiConfig(config);
+          await AvgApiConfig.testApiConfig(config);
+        }
+        showStatus('保存成功', false);
+        hideApiOverlay();
+        return true;
+      } catch (e) {
+        showStatus(e.message || '保存出错', true);
+        return false;
+      } finally {
+        saveBtn.disabled = false;
+      }
     }
 
     function goToCharacter(template) {
@@ -74,38 +177,158 @@
       }
     }
 
-    async function loadTemplates() {
-      const grid = document.getElementById('templatesGrid');
+    function buildTemplateCard(t, onSelect) {
+      const card = document.createElement('div');
+      card.className = 'template-card';
+      const coverUrl = escapeHtml(t.cardCover || '');
+      const subtitle = t.subtitle
+        ? `<p class="template-subtitle">${escapeHtml(t.subtitle)}</p>`
+        : '';
+      card.innerHTML = `
+        <div class="template-card-cover" style="background-image:url('${coverUrl}')">
+          <div class="template-card-cover-shade"></div>
+          <div class="template-card-cover-text">
+            <h3>${escapeHtml(t.title)}</h3>
+            <span class="template-tags">${escapeHtml(t.tags)}</span>
+          </div>
+        </div>
+        <div class="template-card-body">
+          ${subtitle}
+          <p>${escapeHtml(t.description)}</p>
+          <button type="button" class="btn-primary btn-select">选择此剧本</button>
+        </div>
+      `;
+      card.querySelector('.btn-select').addEventListener('click', onSelect);
+      return card;
+    }
+
+    function renderFeaturedTemplates() {
+      const templates = window.AvgTemplates.listFeaturedTemplates();
+      grid.innerHTML = '';
+      templates.forEach((t) => {
+        grid.appendChild(buildTemplateCard(t, () => goToCharacter(t)));
+      });
+
+      const customCard = document.createElement('div');
+      customCard.className = 'template-card template-card-custom';
+      customCard.innerHTML = `
+        <div class="template-card-cover">
+          <div class="template-card-cover-shade"></div>
+          <div class="template-card-cover-text">
+            <h3>自定义剧本</h3>
+            <span class="template-tags">导入 / 自建</span>
+          </div>
+        </div>
+        <div class="template-card-body">
+          <p class="template-subtitle">使用本地 templates 目录下的剧本包</p>
+          <p>将剧本放入项目的 <code>templates/你的剧本ID/story/main.md</code>，在此输入 ID 即可游玩。</p>
+          <button type="button" class="btn-primary btn-select">使用自定义剧本</button>
+        </div>
+      `;
+      customCard.querySelector('.btn-select').addEventListener('click', openCustomTemplateDialog);
+      grid.appendChild(customCard);
+    }
+
+    function openCustomTemplateDialog() {
+      document.getElementById('customTemplateId').value = '';
+      showCustomStatus('', false);
+      customOverlay.classList.add('visible');
+      customOverlay.setAttribute('aria-hidden', 'false');
+      document.getElementById('customTemplateId').focus();
+    }
+
+    function closeCustomTemplateDialog() {
+      customOverlay.classList.remove('visible');
+      customOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    async function templateStoryExists(id) {
+      const rel = id + '/story/main.md';
+      if (window.electronAPI?.fs?.read) {
+        try {
+          await window.electronAPI.fs.read(rel);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      const res = await fetch('/templates/' + encodeURIComponent(id) + '/story/main.md');
+      return res.ok;
+    }
+
+    async function resolveCustomTemplateMeta(id) {
+      const reg = window.AvgTemplates.TEMPLATES[id];
+      if (reg) {
+        return {
+          id: reg.id,
+          title: reg.title,
+          tags: reg.tags,
+          description: reg.description,
+        };
+      }
       try {
-        const templates = await fetchTemplateList();
-        grid.innerHTML = '';
-        templates.forEach(t => {
-          const card = document.createElement('div');
-          card.className = 'template-card';
-          card.innerHTML = `
-            <div class="template-card-header">
-              <h3>${escapeHtml(t.title)}</h3>
-              <span class="template-tags">${escapeHtml(t.tags)}</span>
-            </div>
-            <div class="template-card-body">
-              <p>${escapeHtml(t.description)}</p>
-              <button class="btn-primary btn-select">选择此剧本</button>
-            </div>
-          `;
-          card.querySelector('.btn-select').addEventListener('click', () => goToCharacter(t));
-          grid.appendChild(card);
-        });
-      } catch (e) {
-        grid.innerHTML = '<p class="load-error">加载剧本列表失败：' + escapeHtml(e.message) + '</p>';
+        if (window.electronAPI?.templates?.list) {
+          const list = await window.electronAPI.templates.list();
+          const found = list.find((t) => t.id === id);
+          if (found) return found;
+        } else {
+          const res = await fetch('/api/templates');
+          if (res.ok) {
+            const list = await res.json();
+            const found = list.find((t) => t.id === id);
+            if (found) return found;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      return {
+        id,
+        title: id,
+        tags: '自定义',
+        description: '自定义导入剧本',
+      };
+    }
+
+    async function confirmCustomTemplate() {
+      const id = document.getElementById('customTemplateId').value.trim();
+      if (!id || !/^[a-z0-9][a-z0-9-]*$/i.test(id)) {
+        showCustomStatus('请输入有效的剧本 ID（字母、数字、连字符）', true);
+        return;
+      }
+      const btn = document.getElementById('customConfirmBtn');
+      btn.disabled = true;
+      showCustomStatus('正在校验剧本…', false);
+      try {
+        if (!(await templateStoryExists(id))) {
+          showCustomStatus('未找到该剧本，请确认 templates/' + id + '/story/main.md 存在', true);
+          return;
+        }
+        const meta = await resolveCustomTemplateMeta(id);
+        closeCustomTemplateDialog();
+        goToCharacter(meta);
+      } finally {
+        btn.disabled = false;
       }
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    async function initPage() {
+      renderFeaturedTemplates();
+      if (await needsApiConfig()) {
+        showApiOverlay(true);
+      }
     }
 
-    loadTemplates();
+    document.getElementById('apiSettingsBtn').addEventListener('click', () => showApiOverlay(false));
+    saveBtn.addEventListener('click', saveApiConfigForm);
+    apiCancelBtn.addEventListener('click', hideApiOverlay);
+    document.getElementById('customConfirmBtn').addEventListener('click', confirmCustomTemplate);
+    document.getElementById('customCancelBtn').addEventListener('click', closeCustomTemplateDialog);
+    document.getElementById('customTemplateId').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirmCustomTemplate();
+    });
+
+    initPage();
   </script>
 </body>
 </html>

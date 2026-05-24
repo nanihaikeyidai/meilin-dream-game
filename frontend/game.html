@@ -702,6 +702,9 @@
     <button class="menu-item" onclick="showAbout()"><span class="menu-icon">i</span>关于</button>
   </div>
 
+  <!-- 开始菜单 BGM / 剧本 BGM -->
+  <audio id="menuBgmPlayer" preload="auto" style="display:none"></audio>
+  <audio id="bgmPlayer" preload="auto" style="display:none"></audio>
   <!-- TTS 语音播放器 -->
   <audio id="ttsPlayer" preload="auto" style="display:none"></audio>
   <!-- TTS 状态指示器 -->
@@ -746,6 +749,7 @@
 <script src="js/api.js"></script>
 <script src="js/stream.js"></script>
 <script src="js/tts.js"></script>
+<script src="js/bgm.js"></script>
 <script src="js/save.js"></script>
 <script src="js/bootstrap.js"></script>
 </body>

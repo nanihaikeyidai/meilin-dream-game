@@ -47,6 +47,7 @@
       description: '长安上元灯夜，你捡到一枚玉佩，卷入三股势力与十年旧案。',
       defaultPlayerName: '陈远',
       defaultBg: 'assets/backgrounds/ancient/moonlit_city.png',
+      cardCover: 'assets/backgrounds/ancient/lantern_night.png',
       openingBeat: '上元灯夜',
       styleHint: '古风文风，诗意对话，适度的文言感',
       sceneBackgrounds: ANCIENT_SCENES,
@@ -63,6 +64,10 @@
 - 李怀瑾 — 当朝御史之子，温文尔雅，暗中收集证据
 - 公孙兰 — 退休捕快，经营书肆，知道很多秘密（后期解锁）`,
       ttsEnabled: true,
+      bgmTracks: [
+        'assets/music/changan-moon/bgm_1.mp3',
+        'assets/music/changan-moon/bgm_2.mp3',
+      ],
     },
     'campus-summer': {
       id: 'campus-summer',
@@ -73,6 +78,7 @@
       description: '回到空无一人的母校，在蝉鸣与夕阳里揭开高二那年夏天的秘密。',
       defaultPlayerName: '陈远',
       defaultBg: 'assets/backgrounds/classroom_afternoon.png',
+      cardCover: 'assets/backgrounds/schoolyard.png',
       openingBeat: '回到母校',
       styleHint: '温暖怀旧的现代校园文风，注重氛围与对话',
       sceneBackgrounds: CAMPUS_SCENES,
@@ -91,6 +97,10 @@
 - 陈一鸣 — 话痨好友，气氛担当（暂无立绘）
 - 程念慈 / 叶小满 — 后期可解锁角色`,
       ttsEnabled: false,
+      bgmTracks: [
+        'assets/music/campus-summer/bgm_1.mp3',
+        'assets/music/campus-summer/bgm_2.mp3',
+      ],
     },
     'cafe-night': {
       id: 'cafe-night',
@@ -101,6 +111,7 @@
       description: '在深夜咖啡店里，每个常客都藏着未说出口的秘密。',
       defaultPlayerName: '你',
       defaultBg: 'assets/backgrounds/night_sky.png',
+      cardCover: 'assets/backgrounds/photo_hall.png',
       openingBeat: '深夜咖啡店',
       styleHint: '都市文艺文风，克制细腻，带一点悬疑',
       sceneBackgrounds: {
@@ -123,6 +134,10 @@
 - 周医生 — 失眠的精神科医师
 - 秦雨桐 — 钢琴教师，与黑胶唱片 #7 有关`,
       ttsEnabled: false,
+      bgmTracks: [
+        'assets/music/cafe-night/bgm_1.mp3',
+        'assets/music/cafe-night/bgm_2.mp3',
+      ],
     },
     'suspense-mansion': {
       id: 'suspense-mansion',
@@ -133,6 +148,7 @@
       description: '庄园里的断线电话某些夜晚会响，镜子的另一边有人等你。',
       defaultPlayerName: '你',
       defaultBg: 'assets/backgrounds/photo_hall.png',
+      cardCover: 'assets/backgrounds/summer_farewell.png',
       openingBeat: '镜像之馆',
       styleHint: '悬疑推理文风，氛围压迫，线索清晰',
       sceneBackgrounds: {
@@ -155,12 +171,20 @@
 - 赵铭深 — 刑警
 - 镜中人 — 神秘存在`,
       ttsEnabled: false,
+      bgmTracks: ['assets/music/suspense-mansion/bgm_1.mp3'],
     },
   };
 
   function getTemplate(id) {
     return TEMPLATES[id] || TEMPLATES['changan-moon'];
   }
+
+  const FEATURED_TEMPLATE_IDS = [
+    'changan-moon',
+    'campus-summer',
+    'cafe-night',
+    'suspense-mansion',
+  ];
 
   function listTemplates() {
     return Object.values(TEMPLATES).map((t) => ({
@@ -171,10 +195,27 @@
     }));
   }
 
+  function listFeaturedTemplates() {
+    return FEATURED_TEMPLATE_IDS.map((id) => {
+      const t = TEMPLATES[id];
+      if (!t) return null;
+      return {
+        id: t.id,
+        title: t.title,
+        subtitle: t.subtitle,
+        tags: t.tags,
+        description: t.description,
+        cardCover: t.cardCover || t.defaultBg,
+      };
+    }).filter(Boolean);
+  }
+
   global.AvgTemplates = {
     EXPRESSION_KEYWORDS,
     TEMPLATES,
+    FEATURED_TEMPLATE_IDS,
     getTemplate,
     listTemplates,
+    listFeaturedTemplates,
   };
 })(window);

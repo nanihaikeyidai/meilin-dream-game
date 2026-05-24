@@ -47,5 +47,8 @@ test_*.wav
 test_*.png
 test_dialogue_tts/
 
-# Generated audio cache
+# Generated TTS audio (legacy + per-template cache)
 frontend/assets/voices/
+frontend/assets/voice_refs/
+frontend/assets/tts/*/cache/
+frontend/assets/tts/generate_refs.log
