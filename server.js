@@ -179,13 +179,22 @@ function createGameServer(options = {}) {
   function mockLLMResponse(reqBody, res) {
     const userMsg = (reqBody.messages || []).filter((m) => m.role === 'user').pop();
     const choice = userMsg?.content?.slice(0, 20) || '继续';
+
+    // 从 system prompt 中提取第一个角色名与 openingBeat，让 Mock 文本适配任意模板
+    const sysMsg = (reqBody.messages || []).find((m) => m.role === 'system');
+    const sysText = sysMsg?.content || '';
+    const charMatch = sysText.match(/^- ([\u4e00-\u9fa5·]+?) —/m);
+    const openingMatch = sysText.match(/故事从「(.+?)」切入/);
+    const charName = charMatch ? charMatch[1] : '林雪';
+    const opening = openingMatch ? openingMatch[1] : '自测场景';
+
     const text =
-      '### 自测场景\n\n' +
-      '林雪 [MOOD: warm] [EXPR: smile]「你好，这是本地 Mock 叙事。」\n\n' +
-      '你选择了：' + choice + '。蝉鸣与夕阳把教室染成金色。\n\n' +
-      '1.【在教室里多待一会儿】\n' +
-      '2.【去天台看看】\n' +
-      '3.【给苏云溪发消息】';
+      '### ' + opening + '\n\n' +
+      charName + ' [MOOD: warm] [EXPR: smile]「你好，这是本地 Mock 叙事。」\n\n' +
+      '你选择了：' + choice + '。微风拂过，四周静谧而美好。\n\n' +
+      '1.【在此处停留片刻】\n' +
+      '2.【四处走走看看】\n' +
+      '3.【和身边的人搭话】';
 
     if (reqBody.stream === true) {
       res.writeHead(200, {
