@@ -19,7 +19,7 @@ python scripts/generate_voice_refs.py --template changan-moon --force
 
 文案在 `frontend/tts_templates/{剧本模块}.py` 的 `REF_SAMPLE_LINES`（约 50 字）。
 
-## 已配置剧本
+## 已配置剧本（均已生成参考音，前端 `ttsEnabled: true`）
 
 | templateId | 目录 | 角色数 |
 |------------|------|--------|
@@ -27,6 +27,8 @@ python scripts/generate_voice_refs.py --template changan-moon --force
 | `campus-summer` | 夏日的回音 | 7 |
 | `cafe-night` | 深夜咖啡店 | 6 |
 | `suspense-mansion` | 镜像之馆 | 6 |
+
+合计 25 个 `voice_refs/*.wav`。对局缓存见各剧本 `cache/`（已在 `.gitignore`）。
 
 一键生成全部参考音：
 

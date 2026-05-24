@@ -1,17 +1,18 @@
 # 月下长安 — 6角色×3语气 TTS 音色生成方案
 
-> 迭代3 · 任务3.6 · 2026-05-24
+> 迭代3 · 任务3.6 · 2026-05-24  
+> **注意**：目录结构已迁移。当前以 [`docs/TTS.md`](../../docs/TTS.md) 与 `assets/tts/{templateId}/voice_refs|cache` 为准；下文 `assets/voice_refs`、`assets/voices` 为历史描述。
 
 ---
 
-## 1. 体系架构
+## 1. 体系架构（历史草案，见上注）
 
 ```
 前端游戏引擎 ←→ server_tts.py (FastAPI, :7860)
                     │
                     ├── tts_voice_config.py   ← 角色配置/语气风格
-                    ├── assets/voice_refs/     ← 6角色参考音 (bootstrap)
-                    └── assets/voices/         ← 生成输出 {charId}_{mood}.wav
+                    ├── assets/tts/{templateId}/voice_refs/  ← 按剧本参考音
+                    └── assets/tts/{templateId}/cache/       ← 对局缓存
 ```
 
 ### 核心机制：Clone 模式

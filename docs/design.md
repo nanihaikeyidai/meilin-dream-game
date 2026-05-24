@@ -47,10 +47,21 @@ PNG(当前表情) → PNG(smile) → PNG(default)
 
 | 标签 | 立绘 | TTS |
 |------|------|-----|
-| `[MOOD: warm]` | 无 EXPR 时映射为 `smile` | VoxCPM2 括号语气描述 |
+| `[MOOD: warm]` | 无 EXPR 时映射为 `smile` | Clone 参考音 + `VOICE_DESCRIPTIONS[charId][mood]` |
 | `[EXPR: sad]` | 直接加载 `sad.png` | 不参与（语音只看 MOOD） |
 
 解析入口：`frontend/js/mood.js` → `parsePageBeat()`，由 `engine.js` / `tts.js` / `bootstrap.js` 共用。
+
+### 按剧本 TTS（四默认剧本均已启用）
+
+| templateId | 参考音目录 | 配置模块 |
+|------------|------------|----------|
+| `changan-moon` | `assets/tts/changan-moon/voice_refs/` | `tts_templates/changan_moon.py` |
+| `campus-summer` | `assets/tts/campus-summer/voice_refs/` | `tts_templates/campus_summer.py` |
+| `cafe-night` | `assets/tts/cafe-night/voice_refs/` | `tts_templates/cafe_night.py` |
+| `suspense-mansion` | `assets/tts/suspense-mansion/voice_refs/` | `tts_templates/suspense_mansion.py` |
+
+`template-registry.js` 中 `ttsEnabled: true` 时，`tts.js` 才会请求 `/proxy/tts`。详见 [`docs/TTS.md`](TTS.md)。
 
 ## 标签规范
 
@@ -83,6 +94,7 @@ python frontend/server_tts.py  # TTS（需 VoxCPM2）
 
 ## TODO
 
+- [x] 四默认剧本 TTS 参考音与 `ttsEnabled`（2026-05-24）
 - [ ] 校园/都市/悬疑模板立绘 PNG 补全
 - [ ] Electron 打包
 - [ ] 与 `engine/save-manager.mjs` 存档格式统一

@@ -96,7 +96,7 @@
 - 夏知遥 — 外冷内热的学生会副会长
 - 陈一鸣 — 话痨好友，气氛担当（暂无立绘）
 - 程念慈 / 叶小满 — 后期可解锁角色`,
-      ttsEnabled: false,
+      ttsEnabled: true,
       bgmTracks: [
         'assets/music/campus-summer/bgm_1.mp3',
         'assets/music/campus-summer/bgm_2.mp3',
@@ -133,7 +133,7 @@
 - 赵逐 — 夜班记者
 - 周医生 — 失眠的精神科医师
 - 秦雨桐 — 钢琴教师，与黑胶唱片 #7 有关`,
-      ttsEnabled: false,
+      ttsEnabled: true,
       bgmTracks: [
         'assets/music/cafe-night/bgm_1.mp3',
         'assets/music/cafe-night/bgm_2.mp3',
@@ -170,7 +170,7 @@
 - 顾念安 — 失踪者的妹妹
 - 赵铭深 — 刑警
 - 镜中人 — 神秘存在`,
-      ttsEnabled: false,
+      ttsEnabled: true,
       bgmTracks: ['assets/music/suspense-mansion/bgm_1.mp3'],
     },
   };

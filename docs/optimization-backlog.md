@@ -213,3 +213,4 @@
 |---|---|
 | 2026-05-24 | 初版：基于入口/API/Toast 改动后的复盘清单 |
 | 2026-05-24 | TTS 目录重构为 `assets/tts/{templateId}/voice_refs|cache`，参考音约 50 字 bootstrap |
+| 2026-05-24 | 四默认剧本全部 `ttsEnabled: true`，25 角色参考音就绪 |

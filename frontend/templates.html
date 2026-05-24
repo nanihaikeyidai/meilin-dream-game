@@ -18,6 +18,8 @@
     <div class="templates-grid" id="templatesGrid"></div>
   </div>
 
+  <audio id="menuBgmPlayer" preload="auto"></audio>
+
   <!-- API 配置 -->
   <div class="templates-api-overlay" id="apiConfigOverlay" aria-hidden="true">
     <div class="card templates-api-card">
@@ -70,6 +72,7 @@
 
   <script src="js/api-config.js"></script>
   <script src="js/template-registry.js"></script>
+  <script src="js/bgm.js"></script>
   <script>
     const isElectron = typeof window.electronAPI !== 'undefined';
     const apiOverlay = document.getElementById('apiConfigOverlay');
@@ -84,6 +87,22 @@
     const statusMsg = document.getElementById('statusMsg');
 
     let apiConfigRequired = false;
+    let menuBgm = null;
+
+    function startMenuBgm() {
+      menuBgm?.start();
+    }
+
+    function stopMenuBgm() {
+      menuBgm?.stop();
+    }
+
+    /** 浏览器自动播放策略：首次点击/按键后再尝试播放 */
+    function bindMenuBgmUnlock() {
+      const unlock = () => startMenuBgm();
+      document.addEventListener('pointerdown', unlock, { once: true });
+      document.addEventListener('keydown', unlock, { once: true });
+    }
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -159,6 +178,7 @@
         }
         showStatus('保存成功', false);
         hideApiOverlay();
+        startMenuBgm();
         return true;
       } catch (e) {
         showStatus(e.message || '保存出错', true);
@@ -169,6 +189,7 @@
     }
 
     function goToCharacter(template) {
+      stopMenuBgm();
       sessionStorage.setItem('selectedTemplate', JSON.stringify(template));
       if (window.electronAPI?.navigate?.to) {
         window.electronAPI.navigate.to('character');
@@ -313,10 +334,16 @@
     }
 
     async function initPage() {
+      menuBgm = window.AvgBgm.createMenuBgm();
+      menuBgm.bindDom(document.getElementById('menuBgmPlayer'));
+
       renderFeaturedTemplates();
       if (await needsApiConfig()) {
         showApiOverlay(true);
       }
+
+      startMenuBgm();
+      bindMenuBgmUnlock();
     }
 
     document.getElementById('apiSettingsBtn').addEventListener('click', () => showApiOverlay(false));

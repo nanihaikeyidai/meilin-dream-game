@@ -1,8 +1,10 @@
-# 月下长安 — TTS（文本转语音）需求方案
+# AVG TTS（文本转语音）需求方案
 
-> **编写目的**: 为「月下长安」AVG 游戏接入 VoxCPM2 语音合成提供完整实现方案。
-> **目标读者**: 火舞（前端实现）、茱莉（后端/Python 实现）
-> **状态**: 已实现基础（2026-05-20）；流式叙事见 `stream.js`
+> **编写目的**: 为 girlgame-skill AVG 接入 VoxCPM2 语音合成；初版以「月下长安」为例，现已扩展至四默认剧本。
+> **目标读者**: 前端 / Python 维护者
+> **状态**: 已实现（2026-05-24）— 四剧本 `ttsEnabled`、按 `assets/tts/{templateId}/` 分目录 Clone；流式叙事见 `stream.js`
+>
+> **运维速查**: [`docs/TTS.md`](TTS.md) · 资源 [`frontend/assets/tts/README.md`](../frontend/assets/tts/README.md)
 
 ## 环境变量
 
@@ -25,7 +27,7 @@ npm run dev
 | 能力 | API 用法 | 本项目 |
 |------|----------|--------|
 | **Voice Design** | `text="(自然语言音色+情绪描述)对白正文"` | `server_tts.py` → `full_text = voice_desc + text` |
-| **Controllable Clone** | `reference_wav_path` + 括号内风格指令 | 未用（Phase 2 可做角色参考音） |
+| **Controllable Clone** | `reference_wav_path` + 括号内风格指令 | **已用** — `assets/tts/{templateId}/voice_refs/{charId}.wav` |
 | **情绪控制** | 描述中写明语气/情绪（如「语气压抑，带着悲伤」） | `VOICE_DESCRIPTIONS[charId][mood]` |
 | **生成** | `VoxCPM.generate(text=..., cfg_value=2.0, inference_timesteps=10)` | 与官方 Quick Start 一致 |
 
