@@ -54,7 +54,7 @@
       return expressions.map((expr) => base + expr + '.png');
     }
 
-    function updateSprite(spriteImage, textNameEl, charName, expression, moodLabel) {
+    function updateSprite(spriteImage, textNameEl, charName, expression) {
       const charId = portraits[charName];
       if (!charId) {
         spriteImage.classList.remove('visible', 'slide-in-left');
@@ -95,9 +95,7 @@
 
       currentCharName = charName;
       currentCharId = charId;
-      textNameEl.textContent = moodLabel
-        ? charName + ' · ' + moodLabel
-        : charName;
+      textNameEl.textContent = charName;
       textNameEl.classList.add('visible');
     }
 
@@ -110,7 +108,8 @@
     function applyCharacterFromText(spriteImage, textNameEl, text) {
       if (global.AvgMood) {
         const beat = global.AvgMood.parsePageBeat(text, portraits);
-        if (!beat) {
+        if (!beat || !beat.hasDialogue) {
+          spriteImage.classList.remove('visible', 'slide-in-left');
           textNameEl.classList.remove('visible');
           return null;
         }
@@ -119,7 +118,6 @@
           textNameEl,
           beat.charName,
           beat.expression,
-          beat.moodLabel,
         );
         return beat;
       }
@@ -197,15 +195,36 @@
 
   function extractNarrativeUnits(text) {
     const units = [];
+    const pendingMeta = [];
+
+    function pushUnit(unit) {
+      if (pendingMeta.length) {
+        unit.raw = pendingMeta.concat(unit.raw).join('\n');
+        pendingMeta.length = 0;
+      }
+      units.push(unit);
+    }
+
     for (const line of text.split('\n')) {
       const raw = line.trim();
       if (!raw || isSkippedLine(raw)) continue;
+      if (/^\[SCENE:\s*\w+\]$/i.test(raw)) {
+        pendingMeta.push(raw);
+        continue;
+      }
+
       if (raw.startsWith('###')) {
-        units.push({ type: 'title', raw, text: raw.replace(/^###\s*/, '') });
+        pushUnit({ type: 'title', raw, text: raw.replace(/^###\s*/, '') });
       } else if (raw.startsWith('>')) {
-        units.push({ type: 'quote', raw, text: raw.replace(/^>\s*/, '') });
+        pushUnit({ type: 'quote', raw, text: raw.replace(/^>\s*/, '') });
+      } else if (/「[^」]+」/.test(raw) && raw.indexOf('「') > 0) {
+        pushUnit({
+          type: 'dialogue',
+          raw,
+          text: global.AvgMood?.formatPageLineForDisplay(raw) ?? raw,
+        });
       } else {
-        units.push({
+        pushUnit({
           type: 'para',
           raw,
           text: global.AvgMood?.formatPageLineForDisplay(raw) ?? raw,
@@ -276,9 +295,21 @@
     const fallbackLines = 4;
     if (!textBodyEl || !units.length) {
       const pages = [];
-      for (let i = 0; i < units.length; i += fallbackLines) {
-        pages.push(units.slice(i, i + fallbackLines));
+      let current = [];
+      for (const unit of units) {
+        if (unit.type === 'dialogue') {
+          if (current.length) pages.push(current);
+          current = [];
+          pages.push([unit]);
+        } else {
+          current.push(unit);
+          if (current.length >= fallbackLines) {
+            pages.push(current);
+            current = [];
+          }
+        }
       }
+      if (current.length) pages.push(current);
       return pages.length ? pages : [[]];
     }
 
@@ -295,6 +326,15 @@
     const pages = [];
     let current = [];
     for (const unit of units) {
+      if (unit.type === 'dialogue') {
+        if (current.length) {
+          pages.push(current);
+          current = [];
+        }
+        pages.push([unit]);
+        continue;
+      }
+
       const trial = current.concat(unit);
       renderUnits(measure, trial);
       if (measure.scrollHeight > maxH && current.length > 0) {

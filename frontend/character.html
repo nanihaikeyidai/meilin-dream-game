@@ -46,13 +46,110 @@
         <button id="backBtn" class="btn-primary btn-secondary">返回</button>
         <button id="startBtn" class="btn-primary btn-enter">开始游戏</button>
       </div>
+      <div id="preloadStatus" class="status-msg" style="text-align:center;margin-top:14px"></div>
     </div>
   </div>
+  <audio id="menuBgmPlayer" preload="auto"></audio>
+  <script src="js/template-registry.js"></script>
+  <script src="js/api-config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/story-preload.js"></script>
+  <script src="js/bgm.js"></script>
   <script>
     const templateData = JSON.parse(sessionStorage.getItem('selectedTemplate') || '{}');
-    document.getElementById('templateName').textContent = templateData.title || '未知剧本';
+    const template = window.AvgTemplates.getTemplate(templateData.id || 'changan-moon');
+    const preloadStatus = document.getElementById('preloadStatus');
+    const startBtn = document.getElementById('startBtn');
+    let menuBgm = null;
+    let preloadTimer = null;
+    let preloadToken = 0;
+    let preloadPromise = null;
+    let preloadKey = '';
+
+    function startMenuBgm() {
+      menuBgm?.start();
+    }
+
+    function stopMenuBgm() {
+      menuBgm?.stop();
+    }
+
+    function rememberMenuBgm() {
+      menuBgm?.remember();
+    }
+
+    function bindMenuBgmUnlock() {
+      const unlock = () => startMenuBgm();
+      document.addEventListener('pointerdown', unlock, { once: true });
+      document.addEventListener('keydown', unlock, { once: true });
+    }
+
+    menuBgm = window.AvgBgm.createMenuBgm();
+    menuBgm.bindDom(document.getElementById('menuBgmPlayer'));
+    startMenuBgm();
+    bindMenuBgmUnlock();
+
+    function setPreloadStatus(message, isError) {
+      preloadStatus.textContent = message || '';
+      preloadStatus.className = 'status-msg' + (isError ? ' error' : message ? ' success' : '');
+    }
+
+    function collectCharacter() {
+      return {
+        name: document.getElementById('charName').value.trim(),
+        gender: document.querySelector('input[name="gender"]:checked').value,
+        personality: document.getElementById('charPersonality').value.trim(),
+        background: document.getElementById('charBackground').value.trim(),
+      };
+    }
+
+    function scheduleInitialPreload() {
+      clearTimeout(preloadTimer);
+      preloadTimer = setTimeout(startInitialPreload, 700);
+    }
+
+    async function startInitialPreload() {
+      const character = collectCharacter();
+      if (!character.name) {
+        setPreloadStatus('填写角色名字后，会提前生成开场剧情', false);
+        return null;
+      }
+
+      const normalized = window.AvgStoryPreload.normalizeCharacter(template, character);
+      const key = window.AvgStoryPreload.buildCharacterKey(template.id, normalized);
+      if (key === preloadKey && preloadPromise) return preloadPromise;
+      preloadKey = key;
+
+      const token = ++preloadToken;
+      const cached = window.AvgStoryPreload.getMatching(template.id, normalized);
+      if (cached) {
+        setPreloadStatus('开场剧情已预载，开始游戏可直接进入', false);
+        return cached;
+      }
+
+      setPreloadStatus('正在提前生成开场剧情…', false);
+      preloadPromise = window.AvgStoryPreload.preloadInitialStory(template, normalized)
+        .then((payload) => {
+          if (token === preloadToken) {
+            setPreloadStatus('开场剧情已预载，开始游戏可直接进入', false);
+          }
+          return payload;
+        })
+        .catch((err) => {
+          if (token === preloadToken) {
+            setPreloadStatus('预载失败，进入游戏后将正常生成：' + (err.message || err), true);
+          }
+          return null;
+        });
+      return preloadPromise;
+    }
+
+    document.getElementById('templateName').textContent = templateData.title || template.title || '未知剧本';
+    document.getElementById('charName').value = template.defaultPlayerName || '';
+    scheduleInitialPreload();
 
     document.getElementById('backBtn').addEventListener('click', () => {
+      rememberMenuBgm();
       if (window.electronAPI?.navigate?.to) {
         window.electronAPI.navigate.to('templates');
       } else {
@@ -60,22 +157,31 @@
       }
     });
 
-    document.getElementById('startBtn').addEventListener('click', () => {
+    startBtn.addEventListener('click', async () => {
       const name = document.getElementById('charName').value.trim();
-      const personality = document.getElementById('charPersonality').value.trim();
       if (!name) {
         alert('请输入角色名字');
         return;
       }
-      const gender = document.querySelector('input[name="gender"]:checked').value;
-      const background = document.getElementById('charBackground').value.trim();
-      const character = { name, gender, personality, background };
+
+      const character = collectCharacter();
       sessionStorage.setItem('character', JSON.stringify(character));
+      startBtn.disabled = true;
+      startBtn.textContent = '准备剧情中…';
+      await startInitialPreload();
+      stopMenuBgm();
       if (window.electronAPI?.navigate?.to) {
         window.electronAPI.navigate.to('game');
       } else {
         location.href = 'game.html';
       }
+    });
+
+    document.getElementById('charName').addEventListener('input', scheduleInitialPreload);
+    document.getElementById('charPersonality').addEventListener('input', scheduleInitialPreload);
+    document.getElementById('charBackground').addEventListener('input', scheduleInitialPreload);
+    document.querySelectorAll('input[name="gender"]').forEach((el) => {
+      el.addEventListener('change', scheduleInitialPreload);
     });
   </script>
 </body>

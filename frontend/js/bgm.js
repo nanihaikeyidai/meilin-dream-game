@@ -4,6 +4,7 @@
 (function (global) {
   const DEFAULT_VOLUME = 0.32;
   const MENU_BGM_TRACK = 'assets/music/menu/bgm.mp3';
+  const MENU_BGM_TIME_KEY = 'avg_menu_bgm_time';
 
   function safePlay(player) {
     const p = player.play();
@@ -21,34 +22,74 @@
     let player = null;
     let bound = false;
 
+    function saveTime() {
+      if (!player || !Number.isFinite(player.currentTime)) return;
+      try {
+        global.sessionStorage?.setItem(MENU_BGM_TIME_KEY, String(player.currentTime || 0));
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    function restoreTime() {
+      if (!player) return;
+      const raw = global.sessionStorage?.getItem(MENU_BGM_TIME_KEY);
+      const saved = Number(raw);
+      if (!Number.isFinite(saved) || saved <= 0) return;
+      try {
+        const duration = Number.isFinite(player.duration) && player.duration > 0
+          ? player.duration
+          : 0;
+        player.currentTime = duration ? saved % duration : saved;
+      } catch (_) {
+        /* metadata may not be ready yet */
+      }
+    }
+
     function bindDom(audioEl) {
       if (!audioEl || bound) return;
       player = audioEl;
       player.volume = DEFAULT_VOLUME;
       player.preload = 'auto';
       player.loop = true;
+      player.addEventListener('timeupdate', saveTime);
       bound = true;
     }
 
     function start() {
       if (!player) return;
-      player.src = MENU_BGM_TRACK;
+      const needsSource = !player.getAttribute('src') || !player.src.includes(MENU_BGM_TRACK);
+      if (needsSource) {
+        player.src = MENU_BGM_TRACK;
+        player.addEventListener('loadedmetadata', restoreTime, { once: true });
+      } else {
+        restoreTime();
+      }
       safePlay(player);
     }
 
-    function stop() {
+    function stop(options) {
       if (!player) return;
+      const preserve = !!options?.preserve;
+      if (preserve) saveTime();
+      else global.sessionStorage?.removeItem(MENU_BGM_TIME_KEY);
       player.pause();
-      try {
-        player.currentTime = 0;
-      } catch (_) {
-        /* ignore */
+      if (!preserve) {
+        try {
+          player.currentTime = 0;
+        } catch (_) {
+          /* ignore */
+        }
       }
       player.removeAttribute('src');
       player.load();
     }
 
-    return { bindDom, start, stop };
+    function remember() {
+      saveTime();
+    }
+
+    return { bindDom, start, stop, remember };
   }
 
   function createBgm(template) {

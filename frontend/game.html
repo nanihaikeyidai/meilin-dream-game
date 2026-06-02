@@ -634,7 +634,7 @@
 <div id="gameScreen">
   <!-- 背景 -->
   <div class="bg-layer">
-    <img id="bgImage" src="assets/backgrounds/classroom_afternoon.png" alt="背景">
+    <img id="bgImage" src="assets/backgrounds/campus-summer/classroom_afternoon.png" alt="背景">
     <div class="bg-overlay"></div>
   </div>
 
@@ -698,6 +698,8 @@
   <button id="settingsBtn" onclick="toggleSettings()">⚙</button>
   <div id="settingsPanel">
     <button class="menu-item" onclick="openApiConfig()"><span class="menu-icon">🔑</span>API 配置</button>
+    <button class="menu-item" id="ttsToggleBtn" onclick="toggleTts()"><span class="menu-icon">♪</span>语音：开启</button>
+    <button class="menu-item" onclick="openTtsConfig()"><span class="menu-icon">⚙</span>TTS 模型路径</button>
     <button class="menu-item" onclick="restartGame()"><span class="menu-icon">↻</span>重新开始</button>
     <button class="menu-item" onclick="showAbout()"><span class="menu-icon">i</span>关于</button>
   </div>
@@ -710,6 +712,21 @@
   <!-- TTS 状态指示器 -->
   <div id="ttsIndicator" class="tts-indicator">♪</div>
   <div id="storyToast" aria-live="polite"></div>
+</div>
+
+<!-- TTS 配置弹窗 -->
+<div class="error-overlay" id="ttsConfigOverlay">
+  <div class="api-config-box">
+    <h2>配置 TTS 模型</h2>
+    <p class="api-config-hint">填写 VoxCPM2 模型目录。保存后会通知 TTS 服务按新路径重新加载模型。</p>
+    <label for="ttsModelPath">VoxCPM2 模型路径</label>
+    <input type="text" id="ttsModelPath" placeholder="F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2" autocomplete="off">
+    <div class="api-config-status" id="ttsConfigStatus"></div>
+    <div class="api-config-actions">
+      <button type="button" class="btn-api" id="ttsConfigCancel">取消</button>
+      <button type="button" class="btn-api primary" id="ttsConfigSave">保存并重载</button>
+    </div>
+  </div>
 </div>
 
 <!-- API 配置弹窗 -->
@@ -748,6 +765,7 @@
 <script src="js/api-config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/stream.js"></script>
+<script src="js/story-preload.js"></script>
 <script src="js/tts.js"></script>
 <script src="js/bgm.js"></script>
 <script src="js/save.js"></script>

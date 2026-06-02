@@ -24,6 +24,7 @@ const MIME_TYPES = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.svg': 'image/svg+xml',
+  '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
   '.ico': 'image/x-icon',
 };
@@ -298,6 +299,57 @@ function createGameServer(options = {}) {
     });
   }
 
+  const apiConfigPath = path.join(root, '.girlgame', 'api-config.json');
+  const ttsConfigPath = path.join(root, '.girlgame', 'tts-config.json');
+
+  function readApiConfigFile() {
+    try {
+      if (!fs.existsSync(apiConfigPath)) return {};
+      const raw = JSON.parse(fs.readFileSync(apiConfigPath, 'utf8'));
+      return {
+        baseUrl: (raw.baseUrl || '').trim(),
+        apiKey: (raw.apiKey || '').trim(),
+        model: (raw.model || LLM_MODEL).trim(),
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  function writeApiConfigFile(config) {
+    const dir = path.dirname(apiConfigPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const payload = {
+      baseUrl: (config.baseUrl || '').trim(),
+      apiKey: (config.apiKey || '').trim(),
+      model: (config.model || LLM_MODEL).trim(),
+    };
+    fs.writeFileSync(apiConfigPath, JSON.stringify(payload, null, 2), 'utf8');
+    return payload;
+  }
+
+  function readTtsConfigFile() {
+    try {
+      if (!fs.existsSync(ttsConfigPath)) return {};
+      const raw = JSON.parse(fs.readFileSync(ttsConfigPath, 'utf8'));
+      return {
+        modelPath: (raw.modelPath || '').trim(),
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  function writeTtsConfigFile(config) {
+    const dir = path.dirname(ttsConfigPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const payload = {
+      modelPath: (config.modelPath || '').trim(),
+    };
+    fs.writeFileSync(ttsConfigPath, JSON.stringify(payload, null, 2), 'utf8');
+    return payload;
+  }
+
   const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -333,6 +385,19 @@ function createGameServer(options = {}) {
       return;
     }
 
+    if (url.pathname === '/proxy/tts/config' && req.method === 'GET') {
+      proxyGet(ttsUrl, '/tts/config', res);
+      return;
+    }
+
+    if (url.pathname === '/proxy/tts/config' && req.method === 'POST') {
+      parseBody(req, (body) => {
+        if (!body) return sendJson(res, 400, { error: 'Invalid JSON body' });
+        proxyRequest(ttsUrl, body, res, '/tts/config');
+      });
+      return;
+    }
+
     if (url.pathname === '/proxy/health' && req.method === 'GET') {
       sendJson(res, 200, {
         status: 'ok',
@@ -349,6 +414,34 @@ function createGameServer(options = {}) {
 
     if (url.pathname === '/api/templates' && req.method === 'GET') {
       sendJson(res, 200, listTemplatesApi());
+      return;
+    }
+
+    if (url.pathname === '/api/config' && req.method === 'GET') {
+      sendJson(res, 200, readApiConfigFile());
+      return;
+    }
+
+    if (url.pathname === '/api/config' && req.method === 'POST') {
+      parseBody(req, (body) => {
+        if (!body) return sendJson(res, 400, { error: 'Invalid JSON body' });
+        const saved = writeApiConfigFile(body);
+        sendJson(res, 200, { success: true, config: saved });
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/tts-config' && req.method === 'GET') {
+      sendJson(res, 200, readTtsConfigFile());
+      return;
+    }
+
+    if (url.pathname === '/api/tts-config' && req.method === 'POST') {
+      parseBody(req, (body) => {
+        if (!body) return sendJson(res, 400, { error: 'Invalid JSON body' });
+        const saved = writeTtsConfigFile(body);
+        sendJson(res, 200, { success: true, config: saved });
+      });
       return;
     }
 

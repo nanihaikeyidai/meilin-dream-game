@@ -8,8 +8,10 @@ AVG TTS 语音服务 — VoxCPM2 Clone + MOOD 语气控制
 """
 
 import os
+import json
 import time
 import threading
+import gc
 from pathlib import Path
 
 import soundfile as sf
@@ -35,10 +37,8 @@ from tts_voice_config import (
     normalize_mood,
 )
 
-MODEL_PATH = os.environ.get(
-    "VOXCPM2_PATH",
-    r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2",
-)
+DEFAULT_MODEL_PATH = r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\models\VoxCPM2"
+CONFIG_PATH = Path(__file__).resolve().parents[1] / ".girlgame" / "tts-config.json"
 
 app = FastAPI(title="AVG TTS", version="0.3.0")
 app.add_middleware(
@@ -61,31 +61,91 @@ class TTSRequest(BaseModel):
 class TTSStatus(BaseModel):
     status: str
     model_loaded: bool
+    model_error: str | None = None
+    model_path: str
     uptime: float
     templates: dict[str, dict[str, bool]]
 
 
+class TTSConfig(BaseModel):
+    modelPath: str
+
+
 _model: object | None = None
+_model_error: str | None = None
+_model_path: str = ""
 _start_time: float = time.time()
 _generate_lock = threading.Lock()
 
 
-def load_model():
-    global _model
-    print(f"[TTS] Loading VoxCPM2 from: {MODEL_PATH}", flush=True)
-    from voxcpm.core import VoxCPM
+def read_config_file() -> dict[str, str]:
+    try:
+        if not CONFIG_PATH.is_file():
+            return {}
+        raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        return {"modelPath": str(raw.get("modelPath") or "").strip()}
+    except Exception:
+        return {}
 
-    _model = VoxCPM(
-        voxcpm_model_path=MODEL_PATH,
-        zipenhancer_model_path=None,
-        enable_denoiser=False,
-        optimize=True,
-    )
-    templates = list_template_ids()
-    print(
-        f"[TTS] Model loaded. Templates: {templates or '(none — run scripts/generate_voice_refs.py)'}",
-        flush=True,
-    )
+
+def get_configured_model_path() -> str:
+    saved = read_config_file().get("modelPath")
+    if saved:
+        return saved
+    return os.environ.get("VOXCPM2_PATH", DEFAULT_MODEL_PATH).strip() or DEFAULT_MODEL_PATH
+
+
+def write_config_file(model_path: str) -> dict[str, str]:
+    path = model_path.strip()
+    if not path:
+        raise ValueError("modelPath is required")
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"modelPath": path}
+    CONFIG_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return payload
+
+
+def load_model(model_path: str | None = None):
+    global _model, _model_error, _model_path
+    _model_path = model_path or get_configured_model_path()
+    print(f"[TTS] Loading VoxCPM2 from: {_model_path}", flush=True)
+    try:
+        from voxcpm.core import VoxCPM
+
+        _model = VoxCPM(
+            voxcpm_model_path=_model_path,
+            zipenhancer_model_path=None,
+            enable_denoiser=False,
+            optimize=True,
+        )
+        _model_error = None
+        templates = list_template_ids()
+        print(
+            f"[TTS] Model loaded. Templates: {templates or '(none — run scripts/generate_voice_refs.py)'}",
+            flush=True,
+        )
+    except Exception as exc:
+        _model = None
+        _model_error = f"{type(exc).__name__}: {exc}"
+        print(f"[TTS] Model unavailable: {_model_error}", flush=True)
+
+
+def reset_model_after_generation_error(exc: Exception) -> None:
+    global _model, _model_error
+    message = f"{type(exc).__name__}: {exc}"
+    _model_error = message
+    print(f"[TTS] Resetting model after generation error: {message}", flush=True)
+    _model = None
+    gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+    except Exception as cleanup_exc:
+        print(f"[TTS] CUDA cleanup skipped: {cleanup_exc}", flush=True)
+    load_model(_model_path or get_configured_model_path())
 
 
 @app.on_event("startup")
@@ -102,11 +162,37 @@ async def status():
     for tid in list_template_ids() or [DEFAULT_TEMPLATE_ID]:
         templates[tid] = {cid: True for cid in list_voice_ref_ids(tid)}
     return TTSStatus(
-        status="ok",
+        status="ok" if _model is not None else "model_unavailable",
         model_loaded=_model is not None,
+        model_error=_model_error,
+        model_path=_model_path or get_configured_model_path(),
         uptime=time.time() - _start_time,
         templates=templates,
     )
+
+
+@app.get("/tts/config")
+async def get_config():
+    return TTSConfig(modelPath=_model_path or get_configured_model_path())
+
+
+@app.post("/tts/config")
+async def set_config(req: TTSConfig):
+    try:
+        payload = write_config_file(req.modelPath)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, load_model, payload["modelPath"])
+    return {
+        "success": True,
+        "config": payload,
+        "model_loaded": _model is not None,
+        "model_error": _model_error,
+    }
 
 
 def _generate_sync(
@@ -162,7 +248,10 @@ def _generate_sync(
 @app.post("/tts")
 async def tts(req: TTSRequest):
     if _model is None:
-        raise HTTPException(status_code=503, detail="TTS model not yet loaded")
+        detail = "TTS model not yet loaded"
+        if _model_error:
+            detail += f": {_model_error}"
+        raise HTTPException(status_code=503, detail=detail)
 
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Empty text")
@@ -197,7 +286,14 @@ async def tts(req: TTSRequest):
         return FileResponse(str(out), media_type="audio/wav")
 
     except Exception as e:
-        print(f"[TTS] ERROR: {e}", flush=True)
+        print(f"[TTS] ERROR: {type(e).__name__}: {e!r}", flush=True)
+        try:
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, reset_model_after_generation_error, e)
+        except Exception as reload_exc:
+            print(f"[TTS] Reload after error failed: {type(reload_exc).__name__}: {reload_exc!r}", flush=True)
         raise HTTPException(status_code=500, detail=f"TTS generation failed: {e}")
 
 

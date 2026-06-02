@@ -15,6 +15,7 @@
   let tts = null;
   let bgm = null;
   let menuBgm = null;
+  const DEFAULT_TTS_MODEL_PATH = 'F:\\ComfyUI_V6.0\\ComfyUI-WorkFisher-V2\\ComfyUI\\models\\VoxCPM2';
 
   let playerAttrs = { name: '陈远', personality: 'gentle', personalityText: '' };
   let storyContent = '';
@@ -202,6 +203,16 @@
     return map[key] || key;
   }
 
+  function genderNarrativeHint(gender) {
+    if (gender === '男') {
+      return '主角为男性。NPC 的称谓、亲密边界、恋爱互动、身体动作和社会期待应按男性主角自然处理。';
+    }
+    if (gender === '女') {
+      return '主角为女性。NPC 的称谓、亲密边界、恋爱互动、身体动作和社会期待应按女性主角自然处理。';
+    }
+    return '主角性别为其他/非固定。NPC 应使用中性称谓，避免默认套用男性或女性身体、身份与恋爱互动。';
+  }
+
   async function loadStoryMarkdown(templateId) {
     const rel = templateId + '/story/main.md';
     if (window.electronAPI?.fs?.read) {
@@ -342,38 +353,13 @@
   }
 
   function buildSystemPrompt() {
+    if (window.AvgStoryPreload?.buildSystemPrompt) {
+      return window.AvgStoryPreload.buildSystemPrompt(template, storyContent, playerAttrs);
+    }
     const pers =
       playerAttrs.personalityText ||
       personalityLabel(playerAttrs.personality);
-    const bgLine = playerAttrs.background
-      ? '\n玩家背景：' + playerAttrs.background
-      : '';
-
-    return `你是 AI AVG 游戏引擎。你的角色是旁白 + 所有 NPC + 系统面板。
-
-故事设定：
-${storyContent}
-
-玩家角色：${playerAttrs.name}，性格：${pers}${bgLine}
-
-角色信息：
-${template.charactersPrompt}
-
-游戏规则：
-1. 每次输出包含场景叙述（第二人称「你」）
-2. 不要询问玩家名字或性格，直接开始故事
-3. 故事从「${template.openingBeat}」切入——${playerAttrs.name}进入剧情
-4. 场景标题用 ### 标记
-5. **每次仅输出 3 个编号选项**：1.【…】2.【…】3.【…】，禁止第 4 个预设项，禁止 A/B/C 格式
-6. ${template.styleHint}
-7. 场景切换用 [SCENE: 场景ID]，支持：${template.sceneIdsPrompt}
-8. **角色台词（必须，按剧情情绪填写）**：每一句对白单独一行
-   格式：角色名 [MOOD: 情绪] [EXPR: 表情]「对白正文」
-   - 根据当前剧情语义选择 MOOD 与 EXPR，二者应一致（例：诀别 → MOOD:sad EXPR:sad；调侃 → MOOD:warm EXPR:smile）
-   - MOOD 驱动语音语气（VoxCPM2），EXPR 驱动立绘 PNG，须随情节变化，勿整段都用 neutral
-   - MOOD 仅允许：neutral, warm, happy, sad, angry, cold, surprised, blush
-   - EXPR 仅允许：default, smile, happy, sad, angry, blush, cold, surprised
-9. 纯旁白叙述不写「」、不加 MOOD/EXPR；有「」对白则必须带标签`;
+    return `你是 AI AVG 游戏引擎。\n\n故事设定：\n${storyContent}\n\n玩家角色：${playerAttrs.name}，性格：${pers}`;
   }
 
   function showTypingInDialog() {
@@ -395,7 +381,6 @@ ${template.charactersPrompt}
 
     const sceneId = engine.detectScene(response);
     if (sceneId) engine.updateBg(bgImage, sceneId);
-    engine.applyCharacterFromText(spriteImage, textName, response);
 
     if (pages.length === 0) showChoices();
     else showPage(0);
@@ -472,6 +457,120 @@ ${template.charactersPrompt}
 
   window.toggleSettings = function () {
     document.getElementById('settingsPanel').classList.toggle('visible');
+  };
+
+  function updateTtsToggleLabel() {
+    const btn = document.getElementById('ttsToggleBtn');
+    if (!btn || !tts) return;
+    if (!tts.templateEnabled) {
+      btn.innerHTML = '<span class="menu-icon">♪</span>语音：不可用';
+      btn.disabled = true;
+      return;
+    }
+    btn.disabled = false;
+    btn.innerHTML =
+      '<span class="menu-icon">♪</span>语音：' + (tts.isEnabled() ? '开启' : '关闭');
+  }
+
+  window.toggleTts = async function () {
+    if (!tts) return;
+    if (!tts.templateEnabled) {
+      showStoryToast('当前剧本未启用语音');
+      return;
+    }
+    const next = !tts.isEnabled();
+    const ready = await tts.setEnabled(next);
+    updateTtsToggleLabel();
+    showStoryToast(next ? (ready ? '语音已开启' : '语音服务未连接') : '语音已关闭');
+  };
+
+  function setTtsConfigStatus(message, isError) {
+    const status = document.getElementById('ttsConfigStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.className = 'api-config-status' + (isError ? '' : ' ok');
+  }
+
+  async function loadSavedTtsConfig() {
+    const res = await fetch('/api/tts-config');
+    if (!res.ok) throw new Error('无法读取本地 TTS 配置');
+    return res.json();
+  }
+
+  async function saveLocalTtsConfig(modelPath) {
+    const res = await fetch('/api/tts-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modelPath }),
+    });
+    if (!res.ok) throw new Error('保存本地 TTS 配置失败');
+    return res.json();
+  }
+
+  async function reloadTtsServiceConfig(modelPath) {
+    const res = await fetch('/proxy/tts/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modelPath }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || 'TTS 服务未连接');
+    }
+    return res.json();
+  }
+
+  window.openTtsConfig = async function () {
+    document.getElementById('settingsPanel')?.classList.remove('visible');
+    const overlay = document.getElementById('ttsConfigOverlay');
+    const input = document.getElementById('ttsModelPath');
+    overlay.classList.add('visible');
+    input.value = DEFAULT_TTS_MODEL_PATH;
+    setTtsConfigStatus('正在读取配置…', false);
+    try {
+      const config = await loadSavedTtsConfig();
+      input.value = config.modelPath || DEFAULT_TTS_MODEL_PATH;
+      setTtsConfigStatus('配置保存于 .girlgame/tts-config.json', false);
+    } catch (err) {
+      setTtsConfigStatus(err.message || '读取配置失败', true);
+    }
+    input.focus();
+  };
+
+  window.closeTtsConfig = function () {
+    document.getElementById('ttsConfigOverlay')?.classList.remove('visible');
+  };
+
+  window.saveTtsConfig = async function () {
+    const input = document.getElementById('ttsModelPath');
+    const saveBtn = document.getElementById('ttsConfigSave');
+    const modelPath = input.value.trim();
+    if (!modelPath) {
+      setTtsConfigStatus('请填写 VoxCPM2 模型路径', true);
+      return;
+    }
+
+    saveBtn.disabled = true;
+    setTtsConfigStatus('正在保存配置…', false);
+    try {
+      await saveLocalTtsConfig(modelPath);
+      try {
+        const result = await reloadTtsServiceConfig(modelPath);
+        const ok = !!result.model_loaded;
+        setTtsConfigStatus(
+          ok ? '已保存并重载 TTS 模型' : '已保存，但模型未加载：' + (result.model_error || '未知错误'),
+          !ok
+        );
+      } catch (reloadErr) {
+        setTtsConfigStatus('已保存。TTS 服务未运行时，请重启 server_tts.py 生效。', false);
+      }
+      await tts?.checkStatus();
+      updateTtsToggleLabel();
+    } catch (err) {
+      setTtsConfigStatus(err.message || '保存失败', true);
+    } finally {
+      saveBtn.disabled = false;
+    }
   };
 
   window.showConfirm = function (message) {
@@ -716,8 +815,22 @@ ${template.charactersPrompt}
     awaitingChoice = false;
     engine.setState({ currentCharName: null, currentCharId: null, currentExpression: 'default' });
 
-    messages.push({ role: 'system', content: buildSystemPrompt() });
-    messages.push({ role: 'user', content: '开始故事' });
+    const systemMessage = { role: 'system', content: buildSystemPrompt() };
+    const startMessage = { role: 'user', content: '开始故事' };
+    const preloaded = window.AvgStoryPreload?.consumeMatching(template.id, {
+      name: playerAttrs.name,
+      gender: playerAttrs.gender,
+      personalityText: playerAttrs.personalityText,
+      personality: playerAttrs.personality,
+      background: playerAttrs.background,
+    });
+
+    messages.push(systemMessage);
+    messages.push(startMessage);
+    if (preloaded?.response) {
+      finishAssistantResponse(preloaded.response);
+      return;
+    }
     await requestLLM();
   }
 
@@ -733,6 +846,19 @@ ${template.charactersPrompt}
     if (e.key === 'Escape') {
       e.preventDefault();
       closeCustomInput();
+    }
+  });
+
+  document.getElementById('ttsConfigCancel')?.addEventListener('click', closeTtsConfig);
+  document.getElementById('ttsConfigSave')?.addEventListener('click', saveTtsConfig);
+  document.getElementById('ttsModelPath')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveTtsConfig();
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeTtsConfig();
     }
   });
 
@@ -803,7 +929,8 @@ ${template.charactersPrompt}
         document.getElementById('ttsPlayer'),
         document.getElementById('ttsIndicator')
       );
-      tts.checkStatus();
+      updateTtsToggleLabel();
+      tts.checkStatus().then(updateTtsToggleLabel);
 
       menuBgm = window.AvgBgm.createMenuBgm();
       menuBgm.bindDom(document.getElementById('menuBgmPlayer'));

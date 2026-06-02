@@ -150,11 +150,23 @@
     };
   }
 
-  /** 渲染用：去掉标签，保留角色名与对白 */
+  /** 渲染用：去掉标签；对白行不重复显示说话人 */
   function formatPageLineForDisplay(line) {
     const t = line.trim();
     if (!t) return '';
-    return stripEmotionTags(t);
+    const clean = stripEmotionTags(t);
+    const quoteIdx = clean.indexOf('「');
+    if (quoteIdx <= 0) return clean;
+
+    const beforeQuote = clean.slice(0, quoteIdx).trim().replace(/[:：]\s*$/, '');
+    const dialogue = clean.slice(quoteIdx).trim();
+    if (!beforeQuote) return dialogue;
+
+    const parts = beforeQuote.split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) return dialogue;
+
+    const action = parts.slice(1).join(' ').trim();
+    return action ? '（' + action + '）' + dialogue : dialogue;
   }
 
   global.AvgMood = {

@@ -2,10 +2,13 @@
  * TTS：经 /proxy/tts 转发，MOOD 驱动 VoxCPM2 Voice Design
  */
 (function (global) {
+  const TTS_ENABLED_KEY = 'avg_tts_enabled';
+
   function createTts(template, portraits) {
     const apiBaseUrl = '/proxy';
     const templateId = template?.id || 'changan-moon';
-    const enabled = !!template.ttsEnabled;
+    const templateEnabled = !!template.ttsEnabled;
+    let userEnabled = global.localStorage?.getItem(TTS_ENABLED_KEY) !== '0';
     let player = null;
     let indicator = null;
     let preloaded = null;
@@ -15,10 +18,15 @@
     let preloadAbort = null;
     let playGeneration = 0;
     let paintToken = 0;
+    let requestQueue = Promise.resolve();
 
     function bindDom(ttsPlayer, ttsIndicator) {
       player = ttsPlayer;
       indicator = ttsIndicator;
+    }
+
+    function isEnabled() {
+      return templateEnabled && userEnabled;
     }
 
     /** 等对话框文字完成绘制后再执行（避免先出声后出字） */
@@ -33,15 +41,27 @@
     }
 
     async function checkStatus() {
-      if (!enabled) {
+      if (!isEnabled()) {
         serverReady = false;
+        if (indicator) {
+          indicator.title = templateEnabled ? '语音已关闭' : '当前剧本未启用语音';
+          indicator.dataset.offline = '1';
+        }
         return false;
       }
       try {
         const r = await fetch(apiBaseUrl + '/tts/status', { method: 'GET' });
-        serverReady = r.ok;
+        let status = null;
+        try {
+          status = await r.json();
+        } catch (_) {
+          /* non-JSON status responses are treated by HTTP status only */
+        }
+        serverReady = r.ok && status?.model_loaded !== false;
         if (indicator && !serverReady) {
-          indicator.title = '语音服务未连接';
+          indicator.title = status?.model_error
+            ? '语音模型不可用：' + status.model_error
+            : '语音服务未连接';
           indicator.dataset.offline = '1';
         } else if (indicator) {
           indicator.removeAttribute('title');
@@ -57,6 +77,21 @@
       return serverReady;
     }
 
+    async function setEnabled(next) {
+      userEnabled = !!next;
+      global.localStorage?.setItem(TTS_ENABLED_KEY, userEnabled ? '1' : '0');
+      if (!userEnabled) {
+        stop();
+        if (indicator) {
+          indicator.title = '语音已关闭';
+          indicator.dataset.offline = '1';
+        }
+        serverReady = false;
+        return false;
+      }
+      return checkStatus();
+    }
+
     function showIndicator(active) {
       if (!indicator) return;
       indicator.classList.toggle('active', !!active);
@@ -67,12 +102,10 @@
     }
 
     function abortPlayRequest() {
-      if (playAbort) playAbort.abort();
       playAbort = null;
     }
 
     function abortPreloadRequest() {
-      if (preloadAbort) preloadAbort.abort();
       preloadAbort = null;
     }
 
@@ -130,6 +163,15 @@
       });
     }
 
+    function enqueueTtsAudio(dialogue, turnCount, pageIdx, signal, shouldRun) {
+      const run = () => {
+        if (shouldRun && !shouldRun()) return null;
+        return requestTtsAudio(dialogue, turnCount, pageIdx, signal);
+      };
+      requestQueue = requestQueue.catch(() => {}).then(run);
+      return requestQueue;
+    }
+
     function startPlayback(src, voiceKey) {
       if (!player || activeVoiceKey !== voiceKey) return;
       player.src = src;
@@ -141,16 +183,23 @@
     }
 
     function fetchAndPlay(dialogue, turnCount, pageIdx, voiceKey, gen) {
-      if (!enabled || serverReady === false) return;
+      if (!isEnabled()) return;
       if (gen !== playGeneration || activeVoiceKey !== voiceKey) return;
 
       abortPlayRequest();
       playAbort = new AbortController();
       const signal = playAbort.signal;
 
-      requestTtsAudio(dialogue, turnCount, pageIdx, signal)
+      enqueueTtsAudio(
+        dialogue,
+        turnCount,
+        pageIdx,
+        signal,
+        () => gen === playGeneration && activeVoiceKey === voiceKey
+      )
         .then((blob) => {
           if (gen !== playGeneration || activeVoiceKey !== voiceKey) return;
+          if (!blob) return;
           if (!blob || blob.size < 100) throw new Error('empty audio');
           return startPlayback(URL.createObjectURL(blob), voiceKey);
         })
@@ -163,7 +212,7 @@
     }
 
     function play(turnCount, pageIdx, pageText) {
-      if (!enabled || !player) return;
+      if (!isEnabled() || !player) return;
 
       const dialogue = extractDialogue(pageText);
       if (!dialogue) {
@@ -195,35 +244,37 @@
           return;
         }
 
-        fetchAndPlay(dialogue, turnCount, pageIdx, voiceKey, gen);
+        const playWhenReady = () => fetchAndPlay(dialogue, turnCount, pageIdx, voiceKey, gen);
+        if (serverReady === true) {
+          playWhenReady();
+        } else {
+          checkStatus().then((ready) => {
+            if (ready) playWhenReady();
+          });
+        }
       });
     }
 
     function preloadNext(turnCount, pageIdx, pageText) {
-      if (!enabled || serverReady === false) return;
-      const dialogue = extractDialogue(pageText);
-      if (!dialogue) return;
-
-      const voiceKey = makeVoiceKey(dialogue.charId, turnCount, pageIdx);
-      if (preloaded && preloaded.dataset.voiceKey === voiceKey) return;
-
-      abortPreloadRequest();
-      preloadAbort = new AbortController();
-      const signal = preloadAbort.signal;
-
-      requestTtsAudio(dialogue, turnCount, pageIdx, signal)
-        .then((blob) => {
-          if (signal.aborted) return;
-          if (!blob || blob.size < 100) return;
-
-          preloaded = new Audio();
-          preloaded.src = URL.createObjectURL(blob);
-          preloaded.dataset.voiceKey = voiceKey;
-        })
-        .catch(() => {});
+      // VoxCPM2 is GPU-heavy; speculative preload can create stale queued work
+      // and poison CUDA state after repeated navigation. Keep playback on-demand.
     }
 
-    return { bindDom, play, preloadNext, stop, checkStatus, enabled };
+    return {
+      bindDom,
+      play,
+      preloadNext,
+      stop,
+      checkStatus,
+      setEnabled,
+      isEnabled,
+      get enabled() {
+        return isEnabled();
+      },
+      get templateEnabled() {
+        return templateEnabled;
+      },
+    };
   }
 
   global.AvgTts = { createTts };

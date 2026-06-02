@@ -97,6 +97,10 @@
       menuBgm?.stop();
     }
 
+    function rememberMenuBgm() {
+      menuBgm?.remember();
+    }
+
     /** 浏览器自动播放策略：首次点击/按键后再尝试播放 */
     function bindMenuBgmUnlock() {
       const unlock = () => startMenuBgm();
@@ -189,7 +193,7 @@
     }
 
     function goToCharacter(template) {
-      stopMenuBgm();
+      rememberMenuBgm();
       sessionStorage.setItem('selectedTemplate', JSON.stringify(template));
       if (window.electronAPI?.navigate?.to) {
         window.electronAPI.navigate.to('character');
