@@ -154,7 +154,7 @@ npm run build:mac  # macOS dmg/zip（须在 Mac 上执行）
 | 502 / 上游服务不可达 | 点击 **「配置 API」** 填写 Base URL 与 Key；或在 `.env` 配 `LLM_BASE`+`LLM_API_KEY`；或 `AVG_MOCK_LLM=1` 后**重启** `npm run dev` |
 | 弹出 API 配置 | 服务端未检测到 LLM Key 且本地无保存配置时正常行为；保存后会自动测试连接 |
 | 一直「正在落笔」无内容 | 确认 `LLM_BASE` 可访问，且上游支持 `POST /v1/chat/completions` |
-| 无立绘 | 月下长安等模板需 `frontend/assets/portraits/{角色Id}/*.png`；无 PNG 时不显示占位图 |
+| 无立绘 | 各模板需 `frontend/assets/portraits/{剧本Id}/{角色Id}/*.png`；无 PNG 时不显示占位图 |
 | 无语音 | 见 [`docs/TTS.md`](docs/TTS.md)：启动 `server_tts.py`，检查 `/proxy/tts/status` 是否为 200 |
 | 流式不生效 | 上游需支持 `stream: true`；失败时会自动降级为非流式整包请求 |
 
@@ -212,7 +212,7 @@ AI 引导你创建角色 → 故事开始。
 │   ├── character.html                # 创角
 │   ├── game.html                     # 游戏主界面（立绘 / 对话框 / API 弹窗）
 │   ├── js/                           # engine / bootstrap / api-config / stream / mood / tts
-│   ├── assets/portraits/             # 立绘 PNG（月下长安 6×8 + 校园 7×8）
+│   ├── assets/portraits/             # 立绘 PNG（按剧本/角色分目录，每角色 8 表情）
 │   └── server_tts.py                 # VoxCPM2 TTS 服务
 ├── .cursor/skills/avg-self-test/     # Cursor 自测技能与清单
 ├── electron/                         # 桌面客户端（可选）

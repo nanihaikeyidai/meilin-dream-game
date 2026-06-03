@@ -154,7 +154,7 @@
 
 | 项 | 内容 |
 |---|---|
-| **现状** | `localStorage` 键 `girlgame_api_config` 含完整 apiKey；Electron 用 `userData/config.json`。 |
+| **现状** | 浏览器 `localStorage` 按 origin（含端口）隔离，换 8080→8081 会丢配置；已改为 `server.js` 写入 `.girlgame/api-config.json` 并自动从 localStorage 迁移。 |
 | **建议** | 浏览器仅开发用途并文档警示；或只持久化 baseUrl/model，Key 每会话输入；Electron 保持现状。 |
 | **涉及文件** | `frontend/js/api-config.js`、`docs/optimization-backlog.md`（本文件）、README |
 | **状态** | [ ] 待做 |

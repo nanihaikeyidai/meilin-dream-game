@@ -6,7 +6,7 @@ import urllib.request, json, time, shutil, os
 COMFY_UI = "http://192.168.144.1:8188"
 INPUT_DIR = "F:/ComfyUI_V6.0/ComfyUI-WorkFisher-V2/ComfyUI/input"
 OUTPUT_DIR = "F:/ComfyUI_V6.0/ComfyUI-WorkFisher-V2/ComfyUI/output"
-PORTRAIT_DIR = "D:/Hermes/girlgame-skill/frontend/assets/portraits"
+PORTRAIT_DIR = "D:/HermesWorkspace/girlgame-skill/frontend/assets/portraits/changan-moon"
 
 def queue_prompt(p):
     body = json.dumps({"prompt": p}).encode()

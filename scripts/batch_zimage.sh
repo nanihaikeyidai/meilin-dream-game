@@ -2,7 +2,7 @@
 # 「月下长安」立绘批量生成 — 后台运行版
 COMFY_API="http://192.168.1.2:8188/api/prompt"
 OUTDIR="/mnt/f/ComfyUI_V6.0/ComfyUI-WorkFisher-V2/ComfyUI/output"
-ASDIR="/mnt/d/Hermes/girlgame-skill/frontend/assets/portraits"
+ASDIR="/mnt/d/HermesWorkspace/girlgame-skill/frontend/assets/portraits/changan-moon"
 
 PROMPTS=$(cat <<'PYEOF'
 prompts = {
@@ -15,7 +15,7 @@ import json, os, time, urllib.request, subprocess, sys
 
 COMFY_API = "http://192.168.1.2:8188/api/prompt"
 OUTPUT_DIR = r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\output"
-ASSETS_DIR = r"D:\Hermes\girlgame-skill\frontend\assets\portraits"
+ASSETS_DIR = r"D:\HermesWorkspace\girlgame-skill\frontend\assets\portraits\changan-moon"
 
 # 角色表情提示词 (只有非default)
 prompts = {

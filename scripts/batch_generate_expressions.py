@@ -10,7 +10,7 @@ COMFY_BASE = "http://192.168.1.2:8188"
 COMFY_DIR = r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI"
 INPUT_DIR = os.path.join(COMFY_DIR, "input")
 OUTPUT_DIR = os.path.join(COMFY_DIR, "output")
-ASSETS_DIR = r"D:\Hermes\girlgame-skill\frontend\assets\portraits"
+ASSETS_DIR = r"D:\HermesWorkspace\girlgame-skill\frontend\assets\portraits\changan-moon"
 
 # 角色 + 表情提示词（已验证的 zImage 风格）
 PROMPTS = {}

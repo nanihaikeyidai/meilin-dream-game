@@ -11,10 +11,10 @@ PORTRAITS = os.path.join(ASSETS, "portraits")
 BG = os.path.join(ASSETS, "backgrounds")
 
 SCRIPTS = [
-    {"id": "changan-moon",     "name": "月下长安",   "chars": 6},
-    {"id": "campus-summer",    "name": "夏日的回音",  "chars": 7},
-    {"id": "cafe-night",       "name": "深夜咖啡店",  "chars": 6},
-    {"id": "suspense-mansion", "name": "镜像之馆",    "chars": 6},
+    {"id": "changan-moon",     "name": "月下长安",   "chars": ["xieyunlan", "huayingyue", "guqianfan", "shenmingyue", "lihuaijin", "gongsunlan"]},
+    {"id": "campus-summer",    "name": "夏日的回音",  "chars": ["linxue", "suyunxi", "shenqingci", "jiangxiaoyu", "xiazhiyao", "chengnianci", "yexiaoman"]},
+    {"id": "cafe-night",       "name": "深夜咖啡店",  "chars": ["linyu", "suwan", "gunian", "zhaozhu", "zhoudoctor", "qinyutong"]},
+    {"id": "suspense-mansion", "name": "镜像之馆",    "chars": ["linyingxue", "chenwu", "suwanqing", "gunianan", "zhaomingshen", "jingzhongren"]},
 ]
 
 EXPRESSIONS = ["default", "smile", "happy", "angry", "sad", "surprised", "blush", "cold"]
@@ -60,33 +60,34 @@ def test_portraits():
     total_files = 0
     total_valid = 0
     for script in SCRIPTS:
-        script_dir = os.path.join(PORTRAITS)
-        chars_found = [d for d in os.listdir(script_dir) 
-                      if os.path.isdir(os.path.join(script_dir, d))]
-        print(f"  📁 {script['name']}: {len(chars_found)} 角色目录")
-    
-    # 检查每个角色目录
-    for d in sorted(os.listdir(PORTRAITS)):
-        cd = os.path.join(PORTRAITS, d)
-        if not os.path.isdir(cd): continue
-        files = [f for f in os.listdir(cd) if f.endswith('.png')]
-        for f in sorted(files):
-            fp = os.path.join(cd, f)
-            ok, info = check_png(fp)
-            total_files += 1
-            if ok:
-                total_valid += 1
-            else:
-                ERRORS.append(f"{d}/{f}: {info}")
-    
+        tpl_dir = os.path.join(PORTRAITS, script["id"])
+        chars_found = [d for d in os.listdir(tpl_dir) if os.path.isdir(os.path.join(tpl_dir, d))] if os.path.isdir(tpl_dir) else []
+        print(f"  📁 {script['name']}: {len(chars_found)}/{len(script['chars'])} 角色目录")
+        check(len(chars_found) == len(script["chars"]), f"{script['name']}: 角色目录齐全")
+
+    for script in SCRIPTS:
+        tpl_dir = os.path.join(PORTRAITS, script["id"])
+        if not os.path.isdir(tpl_dir):
+            continue
+        for char_id in script["chars"]:
+            cd = os.path.join(tpl_dir, char_id)
+            if not os.path.isdir(cd):
+                check(False, f"{script['id']}/{char_id}: 目录缺失")
+                continue
+            files = sorted([f for f in os.listdir(cd) if f.endswith('.png')])
+            rel = f"{script['id']}/{char_id}"
+            for f in files:
+                fp = os.path.join(cd, f)
+                ok, info = check_png(fp)
+                total_files += 1
+                if ok:
+                    total_valid += 1
+                else:
+                    ERRORS.append(f"{rel}/{f}: {info}")
+            check(len(files) == 8, f"{rel}: 8/8 表情 ({', '.join([f.replace('.png','') for f in files])})")
+
     check(total_files > 0, f"立绘文件存在: {total_files} 张")
     check(total_valid == total_files, f"全部 PNG 有效: {total_valid}/{total_files}")
-    # 验证每角色8表情
-    for d in sorted(os.listdir(PORTRAITS)):
-        cd = os.path.join(PORTRAITS, d)
-        if not os.path.isdir(cd): continue
-        files = sorted([f for f in os.listdir(cd) if f.endswith('.png')])
-        check(len(files) == 8, f"{d}: 8/8 表情 ({', '.join([f.replace('.png','') for f in files])})")
 
 def test_backgrounds():
     print("\n🌄 背景图完整性")

@@ -8,7 +8,7 @@ import glob
 COMFY_UI = "http://192.168.144.1:8188"
 # Windows Python 用 Windows 路径
 OUTPUT_DIR = "F:/ComfyUI_V6.0/ComfyUI-WorkFisher-V2/ComfyUI/output"
-GAME_PORTRAIT_DIR = "D:/Hermes/girlgame-skill/frontend/assets/portraits"
+GAME_PORTRAIT_DIR = "D:/HermesWorkspace/girlgame-skill/frontend/assets/portraits/changan-moon"
 
 def queue_prompt(prompt_workflow):
     body = json.dumps({"prompt": prompt_workflow}).encode()

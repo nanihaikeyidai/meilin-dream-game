@@ -47,7 +47,7 @@
     }
 
     function portraitPaths(charId, expression) {
-      const base = 'assets/portraits/' + charId + '/';
+      const base = 'assets/portraits/' + template.id + '/' + charId + '/';
       const expressions = [expression];
       if (expression !== 'smile') expressions.push('smile');
       if (expression !== 'default') expressions.push('default');

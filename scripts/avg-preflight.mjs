@@ -10,8 +10,12 @@ const BASE = process.argv.find((a) => a.startsWith('--base='))?.slice(7)
   || process.env.AVG_BASE
   || 'http://localhost:8080';
 
-const ANCIENT = ['huayingyue', 'shenmingyue', 'xieyunlan', 'lihuaijin', 'guqianfan', 'gongsunlan'];
-const CAMPUS = ['linxue', 'suyunxi', 'shenqingci', 'jiangxiaoyu', 'xiazhiyao', 'chengnianci', 'yexiaoman'];
+const PORTRAIT_SETS = [
+  { template: 'changan-moon', chars: ['huayingyue', 'shenmingyue', 'xieyunlan', 'lihuaijin', 'guqianfan', 'gongsunlan'] },
+  { template: 'campus-summer', chars: ['linxue', 'suyunxi', 'shenqingci', 'jiangxiaoyu', 'xiazhiyao', 'chengnianci', 'yexiaoman'] },
+  { template: 'cafe-night', chars: ['linyu', 'suwan', 'gunian', 'zhaozhu', 'zhoudoctor', 'qinyutong'] },
+  { template: 'suspense-mansion', chars: ['linyingxue', 'chenwu', 'suwanqing', 'gunianan', 'zhaomingshen', 'jingzhongren'] },
+];
 const EXPRS = ['default', 'smile', 'happy', 'sad', 'angry', 'blush', 'cold', 'surprised'];
 
 const results = [];
@@ -111,14 +115,18 @@ async function main() {
   // 5. Portraits HTTP
   let found = 0;
   let missing = [];
-  for (const char of [...ANCIENT, ...CAMPUS]) {
-    for (const expr of EXPRS) {
-      const ok = await headOk('/assets/portraits/' + char + '/' + expr + '.png');
-      if (ok) found++;
-      else missing.push(char + '/' + expr + '.png');
+  let total = 0;
+  for (const { template, chars } of PORTRAIT_SETS) {
+    for (const char of chars) {
+      for (const expr of EXPRS) {
+        total++;
+        const rel = '/assets/portraits/' + template + '/' + char + '/' + expr + '.png';
+        const ok = await headOk(rel);
+        if (ok) found++;
+        else missing.push(template + '/' + char + '/' + expr + '.png');
+      }
     }
   }
-  const total = (ANCIENT.length + CAMPUS.length) * EXPRS.length;
   const missHint = missing.length
     ? ` missing ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '...' : ''}`
     : '';

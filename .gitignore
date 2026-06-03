@@ -27,6 +27,9 @@ launcher/start.sh
 # Galgame save files (player data)
 .galgame/
 
+# Browser dev API config (persisted by server.js)
+.girlgame/
+
 # Dependencies
 node_modules/
 
@@ -44,6 +47,7 @@ credentials*
 frontend/auto_test.html
 frontend/demo.html
 test_*.wav
+test_*.mp3
 test_*.png
 test_dialogue_tts/
 

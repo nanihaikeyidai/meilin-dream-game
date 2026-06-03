@@ -98,25 +98,34 @@ echo "--- 5/6 立绘资产检查 ---"
 MISSING=0
 FOUND=0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ANCIENT_CHARS=("huayingyue" "shenmingyue" "xieyunlan" "lihuaijin" "guqianfan" "gongsunlan")
-CAMPUS_CHARS=("linxue" "suyunxi" "shenqingci" "jiangxiaoyu" "xiazhiyao" "chengnianci" "yexiaoman")
+PORTRAIT_SETS=(
+  "changan-moon:huayingyue shenmingyue xieyunlan lihuaijin guqianfan gongsunlan"
+  "campus-summer:linxue suyunxi shenqingci jiangxiaoyu xiazhiyao chengnianci yexiaoman"
+  "cafe-night:linyu suwan gunian zhaozhu zhoudoctor qinyutong"
+  "suspense-mansion:linyingxue chenwu suwanqing gunianan zhaomingshen jingzhongren"
+)
 EXPRESSIONS=("default" "smile" "happy" "sad" "angry" "blush" "cold" "surprised")
-for char in "${ANCIENT_CHARS[@]}" "${CAMPUS_CHARS[@]}"; do
-  for expr in "${EXPRESSIONS[@]}"; do
-    path="$SCRIPT_DIR/assets/portraits/$char/$expr.png"
-    if [ -f "$path" ]; then
-      FOUND=$((FOUND+1))
-    else
-      MISSING=$((MISSING+1))
-    fi
+for entry in "${PORTRAIT_SETS[@]}"; do
+  tpl="${entry%%:*}"
+  chars="${entry#*:}"
+  for char in $chars; do
+    for expr in "${EXPRESSIONS[@]}"; do
+      path="$SCRIPT_DIR/assets/portraits/$tpl/$char/$expr.png"
+      if [ -f "$path" ]; then
+        FOUND=$((FOUND+1))
+      else
+        MISSING=$((MISSING+1))
+      fi
+    done
   done
 done
-echo "  立绘: $FOUND/104 存在, $MISSING/104 缺失"
-if [ "$FOUND" -ge 104 ]; then
-  green "古风+校园立绘齐全 ($FOUND/104 PNG)"
+TOTAL=$((FOUND + MISSING))
+echo "  立绘: $FOUND/$TOTAL 存在, $MISSING/$TOTAL 缺失"
+if [ "$FOUND" -ge "$TOTAL" ]; then
+  green "全部剧本立绘齐全 ($FOUND/$TOTAL PNG)"
   PASS=$((PASS+1))
-elif [ "$FOUND" -ge 96 ]; then
-  green "立绘基本齐全 ($FOUND/104 PNG)"
+elif [ "$FOUND" -ge $((TOTAL - 8)) ]; then
+  green "立绘基本齐全 ($FOUND/$TOTAL PNG)"
   PASS=$((PASS+1))
 else
   red "立绘缺失过多 ($FOUND/104 PNG)"

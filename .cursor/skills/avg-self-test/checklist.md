@@ -45,7 +45,7 @@
 document.getElementById('startOverlay').style.display = 'none';
 document.getElementById('gameScreen').style.display = 'block';
 const img = document.getElementById('spriteImage');
-img.src = 'assets/portraits/linxue/smile.png';
+img.src = 'assets/portraits/campus-summer/linxue/smile.png';
 img.classList.add('visible', 'slide-in-right');
 document.getElementById('textName').textContent = '林雪 · 温和';
 document.getElementById('textName').classList.add('visible');

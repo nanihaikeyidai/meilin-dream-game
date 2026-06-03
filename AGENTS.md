@@ -257,7 +257,7 @@ AI 生成的叙事文本中，引擎通过以下标签控制呈现：
 
 ### 路径与文件组织
 
-- 立绘资源路径固定为 `assets/portraits/{角色Id}/{表情}.png`
+- 立绘资源路径固定为 `assets/portraits/{剧本Id}/{角色Id}/{表情}.png`
 - 模板路径固定为 `templates/{模板Id}/story/main.md`
 - 任何服务端文件路径解析都必须做目录遍历防护（参考 `server.js` 中 `path.normalize` + `startsWith` 检查）
 
@@ -370,7 +370,7 @@ CI/无浏览器环境下的基础验证：
 | 打 Windows 包 | `npm run build:win` |
 | 查看模板列表 | 读 `templates/` 下的子目录，或请求 `http://localhost:8080/api/templates` |
 | 添加新模板 | 在 `templates/` 下新建目录，含 `story/main.md`、`roles/`、`memory/flags.md` 等 |
-| 添加新角色立绘 | 在 `frontend/assets/portraits/{角色Id}/` 下放 `{表情}.png`（8 种标准表情） |
+| 添加新角色立绘 | 在 `frontend/assets/portraits/{剧本Id}/{角色Id}/` 下放 `{表情}.png`（8 种标准表情） |
 | 启动 TTS | `python frontend/server_tts.py`（需设 `VOXCPM2_PATH`） |
 | CLI 存档管理 | `node engine/save-manager.mjs init <存档名>` |
 | 批量存档 | `node engine/batch-save.mjs '<json>'` |

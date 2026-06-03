@@ -4,7 +4,7 @@ import json, os, time, urllib.request, subprocess, sys, shutil
 
 COMFY_API = "http://192.168.1.2:8188/api/prompt"
 OUTPUT_DIR = r"F:\ComfyUI_V6.0\ComfyUI-WorkFisher-V2\ComfyUI\output"
-ASSETS_DIR = r"D:\Hermes\girlgame-skill\frontend\assets\portraits"
+ASSETS_DIR = r"D:\HermesWorkspace\girlgame-skill\frontend\assets\portraits\changan-moon"
 
 PROMPTS = {
     "xieyunlan_smile": "1boy, male, ancient Chinese official, black robe, jade crown, rare gentle smile, eyes softening, elegant restrained, half body, warm light, anime style, ink wash, high quality, solo",
