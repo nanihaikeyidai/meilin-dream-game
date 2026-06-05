@@ -1,32 +1,89 @@
 /**
- * LLM API 配置：Electron 持久化 / 浏览器 localStorage + 代理头
+ * LLM API 配置：Electron 持久化 / 浏览器经 server 文件 + localStorage 备份
  */
 (function (global) {
   const STORAGE_KEY = 'girlgame_api_config';
   const DEFAULT_MODEL = 'deepseek-v4-flash';
 
-  async function loadApiConfig() {
-    if (global.electronAPI?.apiKey?.load) {
-      return global.electronAPI.apiKey.load();
-    }
+  function normalizeConfig(config) {
+    return {
+      baseUrl: (config?.baseUrl || '').trim(),
+      apiKey: (config?.apiKey || '').trim(),
+      model: (config?.model || DEFAULT_MODEL).trim(),
+    };
+  }
+
+  function loadLocalConfig() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
+      return raw ? normalizeConfig(JSON.parse(raw)) : {};
     } catch {
       return {};
     }
   }
 
+  function saveLocalConfig(config) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeConfig(config)));
+  }
+
+  async function loadServerConfig() {
+    const r = await fetch('/api/config', { method: 'GET' });
+    if (!r.ok) throw new Error('load config ' + r.status);
+    return normalizeConfig(await r.json());
+  }
+
+  async function saveServerConfig(config) {
+    const payload = normalizeConfig(config);
+    const r = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('save config ' + r.status);
+    return payload;
+  }
+
+  async function loadApiConfig() {
+    if (global.electronAPI?.apiKey?.load) {
+      return global.electronAPI.apiKey.load();
+    }
+
+    let serverConfig = {};
+    try {
+      serverConfig = await loadServerConfig();
+      if (isConfigComplete(serverConfig)) {
+        saveLocalConfig(serverConfig);
+        return serverConfig;
+      }
+    } catch {
+      /* dev server 未启动或无 /api/config 时走 localStorage */
+    }
+
+    const localConfig = loadLocalConfig();
+    if (isConfigComplete(localConfig)) {
+      try {
+        await saveServerConfig(localConfig);
+      } catch {
+        /* ignore migration failure */
+      }
+      return localConfig;
+    }
+
+    return isConfigComplete(serverConfig) ? serverConfig : localConfig;
+  }
+
   async function saveApiConfig(config) {
-    const payload = {
-      baseUrl: (config.baseUrl || '').trim(),
-      apiKey: (config.apiKey || '').trim(),
-      model: (config.model || DEFAULT_MODEL).trim(),
-    };
+    const payload = normalizeConfig(config);
     if (global.electronAPI?.apiKey?.save) {
       return global.electronAPI.apiKey.save(payload);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+    saveLocalConfig(payload);
+    try {
+      await saveServerConfig(payload);
+    } catch (err) {
+      console.warn('[API Config] server save failed, kept in localStorage:', err.message || err);
+    }
     return { success: true };
   }
 
