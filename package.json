@@ -13,6 +13,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "node server.js",
+    "dev:all": "node scripts/dev-all.mjs",
     "smoke": "bash frontend/smoke_test.sh",
     "test:preflight": "node scripts/avg-preflight.mjs",
     "test:preflight:layout": "node scripts/avg-preflight.mjs --allow-llm-fail",

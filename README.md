@@ -118,7 +118,19 @@ http://localhost:8080/game.html?template=campus-summer
 - **语音**：需启动 TTS；有 `「对白」` 的台词会按 `[MOOD:]` 情绪合成（旁白不播）
 - **对话框**：底部留白、紧凑行距；选项在文本框上方，最多 3 个
 
-#### 4. 启动 TTS（可选，月下长安）
+#### 4. 启动 TTS（可选，四剧本均已启用）
+
+**推荐：一键启动开发服 + TTS**
+
+```bash
+npm run dev:all
+```
+
+会自动拉起 `server_tts.py`（等待模型加载）并启动 `server.js`。若 7860 已有 TTS 在跑，会跳过重复启动。
+
+仅开发服、不要 TTS：`SKIP_TTS=1 npm run dev:all` 或 `npm run dev`。
+
+**手动分终端启动：**
 
 ```bash
 # 指定 VoxCPM2 模型目录（按本机路径修改）
@@ -130,7 +142,7 @@ python frontend/server_tts.py
 bash frontend/start-tts.sh
 ```
 
-另开终端保持 `npm run dev` 运行。健康检查：`http://localhost:8080/proxy/tts/status`（端口以 `PORT` 为准）。
+健康检查：`http://localhost:8080/proxy/tts/status`（端口以 `PORT` 为准）。
 
 **完整配置、排错与局域网说明见 [`docs/TTS.md`](docs/TTS.md)。** 技术方案见 [`docs/tts-plan.md`](docs/tts-plan.md)（基于 [OpenBMB/VoxCPM](https://github.com/OpenBMB/VoxCPM) Voice Design）。
 

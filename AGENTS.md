@@ -172,7 +172,8 @@
 
 ```bash
 npm install
-npm run dev          # 启动 http://localhost:8080
+npm run dev          # 仅开发服 http://localhost:8080
+npm run dev:all      # 开发服 + TTS（推荐本地游玩）
 ```
 
 环境变量（也可写入 `.env`，`server.js` 会自动加载）：
@@ -364,6 +365,7 @@ CI/无浏览器环境下的基础验证：
 | 目的 | 命令 |
 |------|------|
 | 启动开发服 | `npm run dev` |
+| 开发服 + TTS | `npm run dev:all` |
 | 运行预检 | `node scripts/avg-preflight.mjs` |
 | 允许 LLM 失败的预检 | `node scripts/avg-preflight.mjs --allow-llm-fail` |
 | 启动桌面版 | `npm start` |
